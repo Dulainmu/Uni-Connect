@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,23 +7,65 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [department, setDepartment] = useState("");
   const [role, setRole] = useState("student");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, register } = useAuth();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Get the intended destination from location state
+  const from = (location.state as any)?.from?.pathname || "/dashboard";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For MVP, we'll just navigate to dashboard
-    if (role === "student") {
-      navigate("/dashboard");
-    } else {
-      navigate("/lecturer-dashboard");
+    setIsLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+        toast({
+          title: "Success",
+          description: "Logged in successfully!",
+        });
+      } else {
+        const registerData = {
+          firstName,
+          lastName,
+          email,
+          password,
+          role,
+          ...(role === "student" && { studentId }),
+          ...(role === "lecturer" && { department }),
+        };
+        await register(registerData);
+        toast({
+          title: "Success",
+          description: "Account created successfully!",
+        });
+      }
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -54,6 +96,37 @@ const Login = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="Enter your first name"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        className="bg-input border-border"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Enter your last name"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        className="bg-input border-border"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -81,27 +154,66 @@ const Login = () => {
               </div>
 
               {!isLogin && (
-                <div className="space-y-3">
-                  <Label>Role</Label>
-                  <RadioGroup value={role} onValueChange={setRole} className="flex gap-6">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="student" id="student" />
-                      <Label htmlFor="student">Student</Label>
+                <>
+                  <div className="space-y-3">
+                    <Label>Role</Label>
+                    <RadioGroup value={role} onValueChange={setRole} className="flex gap-6">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="student" id="student" />
+                        <Label htmlFor="student">Student</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="lecturer" id="lecturer" />
+                        <Label htmlFor="lecturer">Lecturer</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="admin" id="admin" />
+                        <Label htmlFor="admin">Admin</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {role === "student" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="studentId">Student ID</Label>
+                      <Input
+                        id="studentId"
+                        type="text"
+                        placeholder="Enter your student ID"
+                        value={studentId}
+                        onChange={(e) => setStudentId(e.target.value)}
+                        required
+                        className="bg-input border-border"
+                      />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="lecturer" id="lecturer" />
-                      <Label htmlFor="lecturer">Lecturer</Label>
+                  )}
+
+                  {role === "lecturer" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Department</Label>
+                      <Input
+                        id="department"
+                        type="text"
+                        placeholder="Enter your department"
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                        required
+                        className="bg-input border-border"
+                      />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="admin" id="admin" />
-                      <Label htmlFor="admin">Admin</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                  )}
+                </>
               )}
 
-              <Button type="submit" className="w-full" variant="brand">
-                {isLogin ? "Log In" : "Register"}
+              <Button type="submit" className="w-full" variant="brand" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isLogin ? "Logging in..." : "Creating account..."}
+                  </>
+                ) : (
+                  isLogin ? "Log In" : "Register"
+                )}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">

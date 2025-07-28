@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +16,36 @@ import {
   Settings,
   LogOut
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [studentName] = useState("Chloe");
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      toast({
+        title: "Success",
+        description: "Logged out successfully!",
+      });
+      navigate("/login");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const studentName = user?.firstName || "User";
 
   const announcements = [
     {
@@ -106,14 +133,39 @@ const Dashboard = () => {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">Year 2, Semester 2</span>
+            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{user?.role === 'student' ? 'Student' : user?.role === 'lecturer' ? 'Lecturer' : 'Admin'}</span>
+              {user?.role === 'student' && user?.studentId && (
+                <span>• {user.studentId}</span>
+              )}
+              {user?.role === 'lecturer' && user?.department && (
+                <span>• {user.department}</span>
+              )}
+            </div>
             <Button variant="ghost" size="icon">
               <Bell className="w-4 h-4" />
             </Button>
-            <Avatar>
-              <AvatarImage src="" />
-              <AvatarFallback className="bg-primary text-primary-foreground">C</AvatarFallback>
-            </Avatar>
+            <div className="flex items-center gap-2">
+              <Avatar>
+                <AvatarImage src="" />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {user?.firstName?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="hidden md:block">
+                <p className="text-sm font-medium">{user?.fullName || 'User'}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
