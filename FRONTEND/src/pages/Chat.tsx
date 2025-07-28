@@ -16,13 +16,18 @@ import {
   GraduationCap,
   Bell
 } from "lucide-react";
+import axios from "axios";
+import { useSocket } from "@/contexts/SocketContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
-  id: number;
+  id: string;
   senderId: string;
   senderName: string;
   content: string;
-  timestamp: Date;
+  timestamp: string;
   isOwnMessage: boolean;
 }
 
@@ -34,148 +39,186 @@ interface Chat {
   timestamp: string;
   unreadCount: number;
   avatar: string;
+  isGroupChat?: boolean;
+  participants?: any[];
 }
 
+const API_BASE = "http://localhost:3000/api/chat";
+
 const Chat = () => {
-  const [selectedChat, setSelectedChat] = useState<string>("dr-amelia-turner");
+  const { user } = useAuth();
+  const { socket, isConnected } = useSocket();
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [selectedChat, setSelectedChat] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      senderId: "dr-amelia-turner",
-      senderName: "Dr. Amelia Turner",
-      content: "Hi Dr. Turner, I'm a bit confused about the recent material regarding segmentation vs clustering in machine learning. Could you explain this a bit more please?",
-      timestamp: new Date("2024-01-20T10:30:00"),
-      isOwnMessage: true
-    },
-    {
-      id: 2,
-      senderId: "dr-amelia-turner",
-      senderName: "Dr. Amelia Turner",
-      content: "Hi There, Dr. Turner. I'd be delighted to assist you in the simplest explanation. In machine learning, two fundamental techniques that are often confused are segmentation and clustering. Both aim to group data, but they serve different purposes.",
-      timestamp: new Date("2024-01-20T10:35:00"),
-      isOwnMessage: false
-    },
-    {
-      id: 3,
-      senderId: "dr-amelia-turner",
-      senderName: "Dr. Amelia Turner",
-      content: "Clustering groups data based on similarities without predefined categories. Popular techniques include K-means and hierarchical clustering. The algorithm discovers natural groupings in the data.",
-      timestamp: new Date("2024-01-20T10:36:00"),
-      isOwnMessage: false
-    },
-    {
-      id: 4,
-      senderId: "dr-amelia-turner",
-      senderName: "Dr. Amelia Turner",
-      content: "Segmentation, on the other hand, divides data into predefined categories based on specific criteria. It's more structured and rule-based approach compared to clustering.",
-      timestamp: new Date("2024-01-20T10:38:00"),
-      isOwnMessage: false
-    },
-    {
-      id: 5,
-      senderId: "student",
-      senderName: "You",
-      content: "Thank you so much Dr. Turner. That's a very helpful explanation!",
-      timestamp: new Date("2024-01-20T10:42:00"),
-      isOwnMessage: true
-    },
-    {
-      id: 6,
-      senderId: "dr-amelia-turner",
-      senderName: "Dr. Amelia Turner",
-      content: "You're welcome, Chloe. Don't hesitate to ask if you have any further questions.",
-      timestamp: new Date("2024-01-20T10:43:00"),
-      isOwnMessage: false
-    }
-  ]);
-
-  const chats: Chat[] = [
-    {
-      id: "dr-amelia-turner",
-      name: "Dr. Amelia Turner",
-      role: "Machine Learning Lecturer",
-      lastMessage: "You're welcome, Chloe. Don't hesitate to ask if you have any further questions.",
-      timestamp: "10:43 AM",
-      unreadCount: 0,
-      avatar: ""
-    },
-    {
-      id: "prof-michael-chen",
-      name: "Prof. Michael Chen",
-      role: "Database Systems",
-      lastMessage: "Your project proposal looks good. Let's discuss the implementation details.",
-      timestamp: "Yesterday",
-      unreadCount: 2,
-      avatar: ""
-    },
-    {
-      id: "dr-sarah-wilson",
-      name: "Dr. Sarah Wilson",
-      role: "Software Engineering",
-      lastMessage: "Don't forget about tomorrow's code review session.",
-      timestamp: "Yesterday",
-      unreadCount: 1,
-      avatar: ""
-    },
-    {
-      id: "cs-study-group",
-      name: "CS Study Group",
-      role: "Group Chat",
-      lastMessage: "Anyone free for study session this evening?",
-      timestamp: "2 days ago",
-      unreadCount: 5,
-      avatar: ""
-    }
-  ];
-
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingChats, setLoadingChats] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const { toast } = useToast();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Fetch conversations on mount
   useEffect(() => {
-    scrollToBottom();
+    const fetchChats = async () => {
+      setLoadingChats(true);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API_BASE}/conversations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setChats(res.data.conversations);
+        if (res.data.conversations.length > 0) {
+          setSelectedChat(res.data.conversations[0].id);
+        }
+      } catch (err) {
+        // handle error
+      } finally {
+        setLoadingChats(false);
+      }
+    };
+    fetchChats();
+  }, []);
+
+  // Fetch messages when selectedChat changes
+  useEffect(() => {
+    if (!selectedChat) return;
+    const fetchMessages = async () => {
+      setLoadingMessages(true);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API_BASE}/conversations/${selectedChat}/messages`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setMessages(res.data.messages);
+      } catch (err) {
+        // handle error
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+    fetchMessages();
+  }, [selectedChat]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Socket: receive new messages
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewMessage = (msg: any) => {
+      if (msg && msg.senderId && msg.content) {
+        setMessages((prev) => [...prev, {
+          ...msg,
+          isOwnMessage: msg.senderId === user?._id,
+        }]);
+      }
+    };
+    socket.on("new_message", handleNewMessage);
+    return () => {
+      socket.off("new_message", handleNewMessage);
+    };
+  }, [socket, user]);
+
+  // Socket: receive own message confirmation
+  useEffect(() => {
+    if (!socket) return;
+    const handleMessageSent = (msg: any) => {
+      setMessages((prev) => [...prev, {
+        ...msg,
+        isOwnMessage: true,
+      }]);
+    };
+    socket.on("message_sent", handleMessageSent);
+    return () => {
+      socket.off("message_sent", handleMessageSent);
+    };
+  }, [socket]);
+
+  // Send message
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const message: Message = {
-      id: messages.length + 1,
-      senderId: "student",
-      senderName: "You",
+    if (!newMessage.trim() || !socket || !selectedChat) return;
+    // Find the other participant
+    const chat = chats.find((c) => c.id === selectedChat);
+    let receiverId = chat?.participants?.find((p: any) => p.id !== user?._id)?.id;
+    if (!receiverId) return;
+    socket.emit("send_message", {
+      receiverId,
       content: newMessage,
-      timestamp: new Date(),
-      isOwnMessage: true
-    };
-
-    setMessages([...messages, message]);
+      messageType: "text",
+    });
     setNewMessage("");
-
-    // Simulate lecturer response after a delay
-    setTimeout(() => {
-      const response: Message = {
-        id: messages.length + 2,
-        senderId: selectedChat,
-        senderName: chats.find(chat => chat.id === selectedChat)?.name || "Lecturer",
-        content: "Thank you for your message. I'll get back to you shortly with a detailed response.",
-        timestamp: new Date(),
-        isOwnMessage: false
-      };
-      setMessages(prev => [...prev, response]);
-    }, 1500);
   };
 
-  const selectedChatData = chats.find(chat => chat.id === selectedChat);
+  // Search users for new chat
+  const handleUserSearch = async (query: string) => {
+    setUserSearch(query);
+    if (!query.trim()) {
+      setUserResults([]);
+      return;
+    }
+    setLoadingUsers(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_BASE}/users?search=${encodeURIComponent(query)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserResults(res.data.users);
+    } catch (err) {
+      setUserResults([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
+  // Start a new conversation
+  const handleStartChat = async (userId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE}/conversations`,
+        { participantId: userId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Refresh chats and select the new one
+      const convId = res.data.conversation.id;
+      await refreshChats(convId);
+      setShowUserModal(false);
+      setUserSearch("");
+      setUserResults([]);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.response?.data?.message || "Failed to start chat", variant: "destructive" });
+    }
+  };
+
+  // Helper to refresh chats and optionally select a conversation
+  const refreshChats = async (selectId?: string) => {
+    setLoadingChats(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_BASE}/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setChats(res.data.conversations);
+      if (selectId) setSelectedChat(selectId);
+    } catch {}
+    setLoadingChats(false);
+  };
+
+  const selectedChatData = chats.find((chat) => chat.id === selectedChat);
+
+  const formatTime = (date: string) => {
+    const d = new Date(date);
+    return d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -218,55 +261,103 @@ const Chat = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Chat List */}
         <div className="w-80 border-r border-border bg-card flex flex-col">
-          <div className="p-4 border-b border-border">
-            <div className="relative">
+          <div className="p-4 border-b border-border flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search conversations..."
                 className="pl-10 bg-background"
+                // Optionally implement conversation search here
               />
             </div>
+            <Button size="icon" variant="brand" title="New Chat" onClick={() => setShowUserModal(true)}>
+              +
+            </Button>
           </div>
           
           <ScrollArea className="flex-1">
             <div className="p-2">
-              {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => setSelectedChat(chat.id)}
-                  className={`w-full p-3 rounded-lg text-left hover:bg-secondary/50 transition-colors ${
-                    selectedChat === chat.id ? 'bg-secondary' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Avatar>
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {chat.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      {chat.unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                          <span className="text-xs text-primary-foreground font-medium">
-                            {chat.unreadCount}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-medium text-sm truncate">{chat.name}</h3>
-                        <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
+              {loadingChats ? (
+                <div className="text-center text-muted-foreground">Loading...</div>
+              ) : (
+                chats.map((chat) => (
+                  <button
+                    key={chat.id}
+                    onClick={() => setSelectedChat(chat.id)}
+                    className={`w-full p-3 rounded-lg text-left hover:bg-secondary/50 transition-colors ${
+                      selectedChat === chat.id ? "bg-secondary" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                                                 <Avatar>
+                           <AvatarFallback className="bg-primary/10 text-primary">
+                             {chat.name?.split(" ").map((n) => n[0]).join("") || "U"}
+                           </AvatarFallback>
+                         </Avatar>
+                        {chat.unreadCount > 0 && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                            <span className="text-xs text-primary-foreground font-medium">
+                              {chat.unreadCount}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground mb-1">{chat.role}</p>
-                      <p className="text-xs text-muted-foreground truncate">{chat.lastMessage}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-medium text-sm truncate">{chat.name || "Unknown User"}</h3>
+                          <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-1">{chat.role}</p>
+                        <p className="text-xs text-muted-foreground truncate">{chat.lastMessage}</p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </div>
           </ScrollArea>
         </div>
+        {/* User Search Modal */}
+        <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Start a New Chat</DialogTitle>
+            </DialogHeader>
+            <Input
+              placeholder="Search users by name or email..."
+              value={userSearch}
+              onChange={e => handleUserSearch(e.target.value)}
+              className="mb-2"
+            />
+            {loadingUsers ? (
+              <div className="text-center text-muted-foreground">Searching...</div>
+            ) : userResults.length === 0 && userSearch ? (
+              <div className="text-center text-muted-foreground">No users found.</div>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                                 {userResults.map(u => {
+                   const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim();
+                   const initials = fullName ? fullName.split(" ").map((n: string) => n[0]).join("") : "U";
+                   return (
+                     <div key={u._id} className="flex items-center gap-3 p-2 rounded hover:bg-secondary cursor-pointer" onClick={() => handleStartChat(u._id)}>
+                       <Avatar className="w-8 h-8">
+                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                           {initials}
+                         </AvatarFallback>
+                       </Avatar>
+                       <div className="flex-1 min-w-0">
+                         <div className="font-medium text-sm truncate">{fullName || "Unknown User"}</div>
+                         <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                         <div className="text-xs text-muted-foreground">{u.role}</div>
+                       </div>
+                     </div>
+                   );
+                 })}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
@@ -276,12 +367,12 @@ const Chat = () => {
               <div className="p-4 border-b border-border bg-card flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {selectedChatData.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
+                                         <AvatarFallback className="bg-primary/10 text-primary">
+                       {selectedChatData.name?.split(" ").map((n) => n[0]).join("") || "U"}
+                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h2 className="font-medium">{selectedChatData.name}</h2>
+                                         <h2 className="font-medium">{selectedChatData.name || "Unknown User"}</h2>
                     <p className="text-sm text-muted-foreground">{selectedChatData.role}</p>
                   </div>
                 </div>
@@ -297,49 +388,51 @@ const Chat = () => {
                   </Button>
                 </div>
               </div>
-
               {/* Messages */}
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {!message.isOwnMessage && (
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {message.senderName.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div className={`max-w-[70%] ${message.isOwnMessage ? 'order-first' : ''}`}>
-                        <div
-                          className={`p-3 rounded-lg ${
-                            message.isOwnMessage
-                              ? 'bg-primary text-primary-foreground ml-auto'
-                              : 'bg-secondary'
-                          }`}
-                        >
-                          <p className="text-sm">{message.content}</p>
+                  {loadingMessages ? (
+                    <div className="text-center text-muted-foreground">Loading...</div>
+                  ) : (
+                    messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex gap-3 ${message.isOwnMessage ? "justify-end" : "justify-start"}`}
+                      >
+                        {!message.isOwnMessage && (
+                          <Avatar className="w-8 h-8">
+                                                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                               {message.senderName?.split(" ").map((n) => n[0]).join("") || "U"}
+                             </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className={`max-w-[70%] ${message.isOwnMessage ? "order-first" : ""}`}>
+                          <div
+                            className={`p-3 rounded-lg ${
+                              message.isOwnMessage
+                                ? "bg-primary text-primary-foreground ml-auto"
+                                : "bg-secondary"
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 px-1">
+                            {formatTime(message.timestamp)}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1 px-1">
-                          {formatTime(message.timestamp)}
-                        </p>
+                        {message.isOwnMessage && (
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                              {user?.firstName?.[0] || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
-                      {message.isOwnMessage && (
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            C
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                  ))}
+                    ))
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
-
               {/* Message Input */}
               <div className="p-4 border-t border-border bg-card">
                 <form onSubmit={handleSendMessage} className="flex gap-2">
@@ -352,7 +445,7 @@ const Chat = () => {
                     placeholder="Type your message..."
                     className="flex-1"
                   />
-                  <Button type="submit" variant="brand">
+                  <Button type="submit" variant="brand" disabled={!isConnected}>
                     <Send className="w-4 h-4" />
                   </Button>
                 </form>
