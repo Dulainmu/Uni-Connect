@@ -7,16 +7,23 @@ const connectDB = require('./src/config/db');
 // Load environment variables
 require('dotenv').config();
 
-// Validate required environment variables
-const requiredEnvVars = ['MONGODB_URI'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-
-if (missingEnvVars.length > 0) {
-  console.error('Missing required environment variables:', missingEnvVars.join(', '));
-  console.log('Please create a .env file with the following variables:');
-  console.log('MONGODB_URI=mongodb://localhost:27017/campus-connect');
-  process.exit(1);
+// Set default JWT_SECRET if not provided
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'your-super-secret-jwt-key-change-this-in-production';
+  console.log('Warning: JWT_SECRET not found in environment, using default value');
 }
+
+// Set default MONGODB_URI if not provided
+if (!process.env.MONGODB_URI) {
+  process.env.MONGODB_URI = 'mongodb://localhost:27017/campus-connect';
+  console.log('Warning: MONGODB_URI not found in environment, using default value');
+}
+
+// Log environment configuration
+console.log('Environment configuration:');
+console.log('- JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set (using default)');
+console.log('- MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set (using default)');
+console.log('- NODE_ENV:', process.env.NODE_ENV || 'development');
 
 const app = express();
 const server = createServer(app);
@@ -58,7 +65,7 @@ app.use('/api/test', require('./src/routes/test')); // Test routes for role-base
 app.use('/api/chat', require('./src/routes/chat')); // Chat routes
 // TODO: Add other route files here
 // app.use('/api/users', require('./src/routes/users'));
-// app.use('/api/tickets', require('./src/routes/tickets'));
+app.use('/api/tickets', require('./src/routes/tickets'));
 
 // Initialize Socket.IO
 const { initializeSocket } = require('./src/socket/chatSocket');
@@ -77,13 +84,15 @@ const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
+    console.log('Starting server...');
     server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Socket.IO server initialized`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`✅ Socket.IO server initialized`);
+      console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`✅ Health check available at: http://localhost:${PORT}/health`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };

@@ -3,6 +3,9 @@ require('dotenv').config();
 
 const connectDB = async () => {
   try {
+    console.log('Attempting to connect to MongoDB...');
+    console.log('MONGODB_URI:', process.env.MONGODB_URI);
+    
     // Check if MONGODB_URI is defined
     if (!process.env.MONGODB_URI) {
       console.error('MONGODB_URI environment variable is not defined');
