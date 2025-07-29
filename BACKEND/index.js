@@ -66,6 +66,7 @@ app.use('/api/chat', require('./src/routes/chat')); // Chat routes
 // TODO: Add other route files here
 // app.use('/api/users', require('./src/routes/users'));
 app.use('/api/tickets', require('./src/routes/tickets'));
+app.use('/api/appointments', require('./src/routes/appointments')); // Appointment routes
 
 // Initialize Socket.IO
 const { initializeSocket } = require('./src/socket/chatSocket');
