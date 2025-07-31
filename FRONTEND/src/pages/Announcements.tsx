@@ -25,6 +25,9 @@ import { announcementService, Announcement } from "@/services/announcementServic
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Announcements = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,6 +37,13 @@ const Announcements = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createContent, setCreateContent] = useState("");
+  const [createCategory, setCreateCategory] = useState("general");
+  const [createPriority, setCreatePriority] = useState("low");
+  const [createAudience, setCreateAudience] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
 
   const categories = ["all", "general", "academic", "event", "emergency", "maintenance"];
   const priorities = ["all", "low", "medium", "high", "urgent"];
@@ -93,6 +103,31 @@ const Announcements = () => {
         description: "Failed to mark announcement as read",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCreateAnnouncement = async () => {
+    setCreating(true);
+    try {
+      await announcementService.createAnnouncement({
+        title: createTitle,
+        content: createContent,
+        category: createCategory as any,
+        priority: createPriority as any,
+        targetAudience: createAudience,
+      });
+      toast({ title: "Announcement created!" });
+      setShowCreateModal(false);
+      setCreateTitle("");
+      setCreateContent("");
+      setCreateCategory("general");
+      setCreatePriority("low");
+      setCreateAudience([]);
+      fetchAnnouncements();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to create announcement", variant: "destructive" });
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -221,7 +256,7 @@ const Announcements = () => {
                 <p className="text-muted-foreground">Stay updated with latest news and important information from the university.</p>
               </div>
               {(user?.role === 'lecturer' || user?.role === 'admin') && (
-                <Button>
+                <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Announcement
                 </Button>
@@ -459,6 +494,67 @@ const Announcements = () => {
           </Tabs>
         </div>
       </div>
+
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Announcement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input placeholder="Title" value={createTitle} onChange={e => setCreateTitle(e.target.value)} />
+            <Textarea placeholder="Content" value={createContent} onChange={e => setCreateContent(e.target.value)} />
+            <Select value={createCategory} onValueChange={setCreateCategory}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.filter(c => c !== "all").map(category => (
+                  <SelectItem key={category} value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={createPriority} onValueChange={setCreatePriority}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                {priorities.filter(p => p !== "all").map(priority => (
+                  <SelectItem key={priority} value={priority}>{priority.charAt(0).toUpperCase() + priority.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div>
+              <div className="mb-2 font-medium">Target Audience</div>
+              <div className="flex gap-4">
+                {["student", "lecturer", "admin"].map(role => (
+                  <label key={role} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={createAudience.includes(role)}
+                      onCheckedChange={checked => {
+                        if (checked) {
+                          setCreateAudience(prev => [...prev, role]);
+                        } else {
+                          setCreateAudience(prev => prev.filter(r => r !== role));
+                        }
+                      }}
+                      id={`audience-${role}`}
+                    />
+                    <span>{role.charAt(0).toUpperCase() + role.slice(1)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateAnnouncement} disabled={creating || !createTitle || !createContent}>
+              {creating ? "Creating..." : "Create"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

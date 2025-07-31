@@ -18,6 +18,49 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/contexts/NotificationContext";
+
+// NotificationBell component
+function NotificationBell() {
+  const { notifications, unreadCount, markAllAsRead } = useNotifications();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <Button variant="ghost" size="icon" onClick={() => setOpen((v) => !v)} aria-label="Notifications">
+        <Bell className="w-4 h-4" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs px-1">
+            {unreadCount}
+          </span>
+        )}
+      </Button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-background border border-border rounded-lg shadow-lg z-50">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+            <span className="font-semibold">Notifications</span>
+            <button className="text-xs text-primary underline" onClick={() => { markAllAsRead(); setOpen(false); }}>Mark all as read</button>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">No notifications</div>
+            ) : (
+              notifications.map((notif) => (
+                <div key={notif.id} className={`px-4 py-2 border-b border-border last:border-b-0 ${!notif.read ? 'bg-accent/20' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium capitalize">{notif.type}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">{new Date(notif.createdAt).toLocaleTimeString()}</span>
+                  </div>
+                  <div className="text-sm mt-1">{notif.message}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -142,9 +185,8 @@ const Dashboard = () => {
                 <span>• {user.department}</span>
               )}
             </div>
-            <Button variant="ghost" size="icon">
-              <Bell className="w-4 h-4" />
-            </Button>
+            {/* Replace Bell icon with NotificationBell */}
+            <NotificationBell />
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarImage src="" />
