@@ -24,50 +24,17 @@ import {
   Download
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import { adminService, AnalyticsData } from "@/services/adminService";
+import { useToast } from "@/hooks/use-toast";
 
 const Analytics = () => {
   const [dateRange, setDateRange] = useState("7d");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Mock data - will be replaced with real API calls
-  const [analyticsData, setAnalyticsData] = useState({
-    userMetrics: {
-      totalUsers: 1247,
-      activeUsers: 892,
-      newRegistrations: 45,
-      userGrowthRate: 12.5
-    },
-    communicationMetrics: {
-      totalMessages: 3421,
-      averageResponseTime: 2.3,
-      appointmentBookings: 156,
-      ticketResolutionRate: 87.5
-    },
-    engagementMetrics: {
-      dailyActiveUsers: 234,
-      featureUsage: [
-        { name: 'Chat', usage: 85 },
-        { name: 'Tickets', usage: 67 },
-        { name: 'Appointments', usage: 45 },
-        { name: 'Announcements', usage: 78 }
-      ],
-      peakHours: [
-        { hour: '9AM', users: 120 },
-        { hour: '10AM', users: 180 },
-        { hour: '11AM', users: 220 },
-        { hour: '12PM', users: 200 },
-        { hour: '1PM', users: 150 },
-        { hour: '2PM', users: 190 },
-        { hour: '3PM', users: 240 },
-        { hour: '4PM', users: 210 }
-      ]
-    },
-    performanceMetrics: {
-      systemUptime: 99.8,
-      errorRate: 0.2,
-      averageLoadTime: 1.2
-    }
-  });
+  // Real data from API
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
   const userGrowthData = [
     { date: '2024-01-01', users: 1100 },
@@ -97,11 +64,65 @@ const Analytics = () => {
   ];
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    fetchAnalyticsData();
   }, [dateRange]);
+
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await adminService.getAnalyticsData(dateRange);
+      setAnalyticsData(data);
+    } catch (error: any) {
+      console.error("Analytics error:", error);
+      setError(error.message || "Failed to fetch analytics data");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch analytics data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (error && !loading) {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Error Loading Analytics</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={fetchAnalyticsData} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading analytics data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analyticsData) {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">No Data Available</h2>
+          <p className="text-muted-foreground">Analytics data is not available at the moment.</p>
+        </div>
+      </div>
+    );
+  }
 
   const formatNumber = (num: number) => {
     if (num >= 1000) {
@@ -117,14 +138,6 @@ const Analytics = () => {
   const getChangeIcon = (change: number) => {
     return change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />;
   };
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">

@@ -12,11 +12,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminService, AdminStats } from "@/services/adminService";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchAdminStats();
@@ -25,25 +28,16 @@ const AdminDashboard = () => {
   const fetchAdminStats = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await adminService.getAdminStats();
       setStats(data);
     } catch (error: any) {
       console.error("Admin stats error:", error);
-      // Don't show error toast for now, just use fallback data
-      // toast({
-      //   title: "Error",
-      //   description: "Failed to fetch admin statistics",
-      //   variant: "destructive",
-      // });
-      // Fallback to mock data
-      setStats({
-        totalUsers: 1247,
-        activeUsers: 892,
-        totalTickets: 156,
-        openTickets: 23,
-        resolvedTickets: 133,
-        totalMessages: 3421,
-        systemHealth: "Good"
+      setError(error.message || "Failed to fetch admin statistics");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch admin statistics",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -56,6 +50,21 @@ const AdminDashboard = () => {
     { id: 3, type: "appointment_booked", description: "Appointment booked with Dr. Smith", time: "10 minutes ago" },
     { id: 4, type: "user_registration", description: "New lecturer registered: Prof. Johnson", time: "15 minutes ago" }
   ];
+
+  if (error && !loading) {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Error Loading Dashboard</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={fetchAdminStats} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

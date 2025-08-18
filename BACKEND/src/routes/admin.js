@@ -333,11 +333,138 @@ const bulkUpdateUsers = async (req, res) => {
   }
 };
 
+// @desc    Export users data
+// @route   GET /api/admin/export/users
+// @access  Private/Admin
+const exportUsers = async (req, res) => {
+  try {
+    const { format = 'csv' } = req.query;
+    
+    const users = await User.find().select('-password');
+    
+    if (format === 'csv') {
+      const csvData = [
+        ['ID', 'First Name', 'Last Name', 'Email', 'Role', 'Department', 'Status', 'Created At'],
+        ...users.map(user => [
+          user._id,
+          user.firstName,
+          user.lastName,
+          user.email,
+          user.role,
+          user.department || '',
+          user.isActive ? 'Active' : 'Inactive',
+          new Date(user.createdAt).toISOString()
+        ])
+      ].map(row => row.join(',')).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=users.csv');
+      res.send(csvData);
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Unsupported format. Only CSV is supported.'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error exporting users data',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Export tickets data
+// @route   GET /api/admin/export/tickets
+// @access  Private/Admin
+const exportTickets = async (req, res) => {
+  try {
+    const { format = 'csv' } = req.query;
+    
+    const tickets = await Ticket.find().populate('createdBy', 'firstName lastName email');
+    
+    if (format === 'csv') {
+      const csvData = [
+        ['ID', 'Title', 'Category', 'Priority', 'Status', 'Created By', 'Assigned To', 'Created At'],
+        ...tickets.map(ticket => [
+          ticket._id,
+          ticket.title,
+          ticket.category,
+          ticket.priority,
+          ticket.status,
+          ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : '',
+          ticket.assignedTo || '',
+          new Date(ticket.createdAt).toISOString()
+        ])
+      ].map(row => row.join(',')).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=tickets.csv');
+      res.send(csvData);
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Unsupported format. Only CSV is supported.'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error exporting tickets data',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Export analytics data
+// @route   GET /api/admin/export/analytics
+// @access  Private/Admin
+const exportAnalytics = async (req, res) => {
+  try {
+    const { format = 'csv', range = '7d' } = req.query;
+    
+    // Get basic analytics data
+    const totalUsers = await User.countDocuments();
+    const totalTickets = await Ticket.countDocuments();
+    const resolvedTickets = await Ticket.countDocuments({ status: 'resolved' });
+    const averageResponseTime = 2.3; // Mock for now
+    
+    if (format === 'csv') {
+      const csvData = [
+        ['Metric', 'Value', 'Date Range'],
+        ['Total Users', totalUsers, range],
+        ['Total Tickets', totalTickets, range],
+        ['Resolved Tickets', resolvedTickets, range],
+        ['Average Response Time (hours)', averageResponseTime, range]
+      ].map(row => row.join(',')).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=analytics.csv');
+      res.send(csvData);
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Unsupported format. Only CSV is supported.'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error exporting analytics data',
+      error: error.message
+    });
+  }
+};
+
 // Routes
 router.get('/stats', getAdminStats);
 router.get('/analytics/users', getUserAnalytics);
 router.get('/analytics/communication', getCommunicationAnalytics);
 router.get('/system/health', getSystemHealth);
 router.put('/users/bulk', bulkUpdateUsers);
+router.get('/export/users', exportUsers);
+router.get('/export/tickets', exportTickets);
+router.get('/export/analytics', exportAnalytics);
 
 module.exports = router;
