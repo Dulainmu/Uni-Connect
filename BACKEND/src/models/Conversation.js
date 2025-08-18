@@ -58,9 +58,9 @@ conversationSchema.statics.findConversation = function(userId1, userId2) {
 conversationSchema.statics.findUserConversations = function(userId) {
   return this.find({
     participants: userId
-  }).populate('participants', 'name email role avatar')
+  }).populate('participants', 'firstName lastName email role')
     .populate('lastMessage')
-    .populate('groupAdmin', 'name email')
+    .populate('groupAdmin', 'firstName lastName email')
     .sort({ lastMessageAt: -1 });
 };
 

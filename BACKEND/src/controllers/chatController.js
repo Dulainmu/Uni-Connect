@@ -59,7 +59,7 @@ const getConversationMessages = async (req, res) => {
     
     // Verify user is part of the conversation
     const conversation = await Conversation.findById(conversationId);
-    if (!conversation || !conversation.participants.includes(userId)) {
+    if (!conversation || !conversation.participants.some(p => p.toString() === userId)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied to this conversation'
@@ -72,7 +72,7 @@ const getConversationMessages = async (req, res) => {
         { senderId: { $in: conversation.participants }, receiverId: userId }
       ]
     })
-    .populate('senderId', 'name email role avatar')
+    .populate('senderId', 'firstName lastName email role')
     .sort({ createdAt: 1 })
     .limit(50);
 

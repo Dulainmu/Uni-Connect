@@ -55,7 +55,7 @@ const initializeSocket = (io) => {
         await message.save();
         
         // Populate sender information
-        await message.populate('senderId', 'name email role avatar');
+        await message.populate('senderId', 'firstName lastName email role');
         
         // Find or create conversation
         let conversation = await Conversation.findConversation(socket.userId, receiverId);
@@ -81,7 +81,7 @@ const initializeSocket = (io) => {
         const formattedMessage = {
           id: message._id,
           senderId: message.senderId._id,
-          senderName: message.senderId.name,
+          senderName: `${message.senderId.firstName || ''} ${message.senderId.lastName || ''}`.trim(),
           content: message.content,
           timestamp: message.createdAt,
           isOwnMessage: false,
@@ -134,7 +134,7 @@ const initializeSocket = (io) => {
       if (receiverSocketId) {
         io.to(receiverSocketId).emit('user_typing', {
           userId: socket.userId,
-          userName: socket.user.name
+          userName: `${socket.user.firstName || ''} ${socket.user.lastName || ''}`.trim() || socket.user.email
         });
       }
     });
@@ -154,8 +154,11 @@ const initializeSocket = (io) => {
     socket.on('mark_as_read', async (data) => {
       try {
         const { conversationId } = data;
-        
-        // Mark messages as read
+        // Load conversation first
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) return;
+
+        // Mark messages as read for this conversation
         await Message.updateMany(
           {
             receiverId: socket.userId,
@@ -169,7 +172,6 @@ const initializeSocket = (io) => {
         );
         
         // Reset unread count
-        const conversation = await Conversation.findById(conversationId);
         if (conversation) {
           conversation.unreadCount.set(socket.userId, 0);
           await conversation.save();
