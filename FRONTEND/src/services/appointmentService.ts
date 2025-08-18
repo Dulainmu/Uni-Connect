@@ -1,7 +1,7 @@
 import { authService } from './authService';
 
 const API_BASE_URL = 'http://localhost:3000/api';
-
+//new
 export interface Appointment {
   _id: string;
   student: {
@@ -108,11 +108,11 @@ export interface StaffAvailability {
 class AppointmentService {
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const token = authService.getToken();
-    
+
     console.log('Making appointment request to:', `${API_BASE_URL}/appointments${endpoint}`);
     console.log('Token available:', !!token);
     console.log('Request options:', options);
-    
+
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -125,10 +125,10 @@ class AppointmentService {
     console.log('Request config:', config);
 
     const response = await fetch(`${API_BASE_URL}/appointments${endpoint}`, config);
-    
+
     console.log('Response status:', response.status);
     console.log('Response ok:', response.ok);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Error response:', errorData);
