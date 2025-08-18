@@ -21,10 +21,10 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  GraduationCap,
   Bell,
   Loader2
 } from "lucide-react";
+import Logo from "@/components/Logo";
 
 interface TicketData {
   title: string;
@@ -168,9 +168,7 @@ const Tickets = () => {
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <Logo size={32} />
               <span className="text-xl font-bold">UniConnect</span>
             </div>
             <nav className="hidden md:flex items-center gap-6 ml-8">

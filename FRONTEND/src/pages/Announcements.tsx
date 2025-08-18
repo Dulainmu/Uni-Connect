@@ -13,7 +13,6 @@ import {
   Filter,
   Clock,
   BookOpen,
-  GraduationCap,
   AlertTriangle,
   Info,
   CheckCircle,
@@ -21,6 +20,7 @@ import {
   Plus,
   Loader2
 } from "lucide-react";
+import Logo from "@/components/Logo";
 import { announcementService, Announcement } from "@/services/announcementService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -220,9 +220,7 @@ const Announcements = () => {
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <Logo size={32} />
               <span className="text-xl font-bold">UniConnect</span>
             </div>
             <nav className="hidden md:flex items-center gap-6 ml-8">
@@ -374,7 +372,7 @@ const Announcements = () => {
                                 <Clock className="w-3 h-3" />
                                 {formatDate(announcement.createdAt)}
                               </span>
-                              <span>By {announcement.author.firstName} {announcement.author.lastName}</span>
+                              <span>By {announcement.author ? `${announcement.author.firstName} ${announcement.author.lastName}` : 'Unknown Author'}</span>
                               <span>{announcement.readCount} read{announcement.readCount !== 1 ? 's' : ''}</span>
                             </div>
                           </div>
@@ -426,7 +424,7 @@ const Announcements = () => {
                                 <Clock className="w-3 h-3" />
                                 {formatDate(announcement.createdAt)}
                               </span>
-                              <span>By {announcement.author.firstName} {announcement.author.lastName}</span>
+                              <span>By {announcement.author ? `${announcement.author.firstName} ${announcement.author.lastName}` : 'Unknown Author'}</span>
                               <span>{announcement.readCount} read{announcement.readCount !== 1 ? 's' : ''}</span>
                             </div>
                           </div>
@@ -480,7 +478,7 @@ const Announcements = () => {
                                 <Clock className="w-3 h-3" />
                                 {formatDate(announcement.createdAt)}
                               </span>
-                              <span>By {announcement.author.firstName} {announcement.author.lastName}</span>
+                              <span>By {announcement.author ? `${announcement.author.firstName} ${announcement.author.lastName}` : 'Unknown Author'}</span>
                               <span>{announcement.readCount} read{announcement.readCount !== 1 ? 's' : ''}</span>
                             </div>
                           </div>

@@ -6,7 +6,7 @@ export interface Announcement {
   _id: string;
   title: string;
   content: string;
-  author: {
+  author?: {
     _id: string;
     firstName: string;
     lastName: string;
