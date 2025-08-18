@@ -10,7 +10,10 @@ const {
   completeAppointment,
   getAvailableStaff,
   getAppointmentStats,
-  getStaffAvailability
+  getStaffAvailability,
+  createSlot,
+  getSlotsByDate,
+  deleteSlot
 } = require('../controllers/appointmentController');
 const { protect, authorizeStudent, authorizeLecturer, authorizeAdmin } = require('../middleware/auth');
 
@@ -28,6 +31,11 @@ router.get('/stats/:role', getAppointmentStats);
 
 // Get staff availability for a specific date (must come before /:role)
 router.get('/availability/:staffId/:date', getStaffAvailability);
+
+// Lecturer-defined slots
+router.post('/slots', authorizeLecturer, createSlot);
+router.get('/slots/:staffId/:date', getSlotsByDate);
+router.delete('/slots/:id', authorizeLecturer, deleteSlot);
 
 // Get single appointment (must come before /:role)
 router.get('/ticket/:id', getAppointment);

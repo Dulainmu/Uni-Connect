@@ -1,5 +1,6 @@
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
+const Slot = require('../models/Slot');
 
 // @desc    Create new appointment
 // @route   POST /api/appointments
@@ -44,6 +45,31 @@ const createAppointment = async (req, res) => {
         success: false,
         message: 'This time slot conflicts with an existing appointment'
       });
+    }
+
+    // If lecturer-defined slots exist for this date, ensure requested time fits within a slot
+    const existingSlots = await Slot.find({ staff: staffId, date: date, isActive: true });
+    if (existingSlots.length > 0) {
+      const toMinutes = (time) => {
+        const [t, mod] = time.split(' ');
+        let [h, m] = t.split(':');
+        h = parseInt(h);
+        if (mod === 'PM' && h !== 12) h += 12; else if (mod === 'AM' && h === 12) h = 0;
+        return h * 60 + parseInt(m);
+      };
+      const reqStart = toMinutes(startTime);
+      const reqEnd = toMinutes(endTime);
+      const fitsAnySlot = existingSlots.some(slot => {
+        const slotStart = toMinutes(slot.startTime);
+        const slotEnd = toMinutes(slot.endTime);
+        return reqStart >= slotStart && reqEnd <= slotEnd;
+      });
+      if (!fitsAnySlot) {
+        return res.status(400).json({
+          success: false,
+          message: 'Selected time does not match any available slot for this lecturer on the chosen date'
+        });
+      }
     }
 
     console.log('Creating appointment with data:', {
@@ -604,35 +630,82 @@ const getStaffAvailability = async (req, res) => {
       status: { $in: ['pending', 'confirmed'] }
     }).sort({ startTime: 1 });
 
-    // Define business hours (9 AM to 5 PM)
-    const businessHours = [];
-    for (let hour = 9; hour <= 16; hour++) {
-      const time = `${hour}:00 ${hour < 12 ? 'AM' : 'PM'}`;
-      businessHours.push(time);
-    }
+    // Prefer lecturer-defined slots if present
+    const slots = await Slot.find({ staff: staffId, date: date, isActive: true }).sort({ startTime: 1 });
 
-    // Find available time slots
-    const availableSlots = [];
-    for (let i = 0; i < businessHours.length - 1; i++) {
-      const startTime = businessHours[i];
-      const endTime = businessHours[i + 1];
-      
-      // Check if this slot conflicts with existing appointments
-      const hasConflict = appointments.some(appointment => {
-        const appointmentStart = appointment.convertTo24Hour(appointment.startTime);
-        const appointmentEnd = appointment.convertTo24Hour(appointment.endTime);
-        const slotStart = appointment.convertTo24Hour(startTime);
-        const slotEnd = appointment.convertTo24Hour(endTime);
-        
-        return (slotStart < appointmentEnd && slotEnd > appointmentStart);
-      });
+    let availableSlots = [];
+    if (slots.length > 0) {
+      // Remove parts of slots that are occupied by appointments; return remaining slot ranges
+      const toMinutes = (time) => {
+        const [t, mod] = time.split(' ');
+        let [h, m] = t.split(':');
+        h = parseInt(h);
+        if (mod === 'PM' && h !== 12) h += 12; else if (mod === 'AM' && h === 12) h = 0;
+        return h * 60 + parseInt(m);
+      };
 
-      if (!hasConflict) {
-        availableSlots.push({
-          startTime,
-          endTime,
-          available: true
+      // Build occupied intervals from appointments
+      const occupied = appointments.map(a => ({ start: toMinutes(a.startTime), end: toMinutes(a.endTime) }));
+
+      for (const slot of slots) {
+        const sStart = toMinutes(slot.startTime);
+        const sEnd = toMinutes(slot.endTime);
+        // Start with the full slot, subtract occupied intervals
+        let fragments = [{ start: sStart, end: sEnd }];
+        for (const occ of occupied) {
+          const nextFragments = [];
+          for (const frag of fragments) {
+            // no overlap
+            if (occ.end <= frag.start || occ.start >= frag.end) {
+              nextFragments.push(frag);
+            } else {
+              // overlap: keep left part
+              if (occ.start > frag.start) {
+                nextFragments.push({ start: frag.start, end: Math.max(frag.start, occ.start) });
+              }
+              // keep right part
+              if (occ.end < frag.end) {
+                nextFragments.push({ start: Math.min(occ.end, frag.end), end: frag.end });
+              }
+            }
+          }
+          fragments = nextFragments;
+        }
+        // Convert fragments back to HH:MM AM/PM boundaries rounded to hour marks
+        const toLabel = (mins) => {
+          let h = Math.floor(mins / 60);
+          const m = mins % 60;
+          const mod = h >= 12 ? 'PM' : 'AM';
+          if (h === 0) h = 12; else if (h > 12) h = h - 12;
+          const mm = m.toString().padStart(2, '0');
+          return `${h}:${mm} ${mod}`;
+        };
+        for (const f of fragments) {
+          if (f.end - f.start >= 30) { // expose fragments of at least 30 minutes
+            availableSlots.push({ startTime: toLabel(f.start), endTime: toLabel(f.end), available: true });
+          }
+        }
+      }
+    } else {
+      // Fallback to business hours (9-5) in 1-hour blocks if no slots defined
+      const businessHours = [];
+      for (let hour = 9; hour <= 16; hour++) {
+        const time = `${hour}:00 ${hour < 12 ? 'AM' : 'PM'}`;
+        businessHours.push(time);
+      }
+      for (let i = 0; i < businessHours.length - 1; i++) {
+        const startTime = businessHours[i];
+        const endTime = businessHours[i + 1];
+        const hasConflict = appointments.some(appointment => {
+          const appointmentStart = appointment.convertTo24Hour(appointment.startTime);
+          const appointmentEnd = appointment.convertTo24Hour(appointment.endTime);
+          const slotStart = appointment.convertTo24Hour(startTime);
+          const slotEnd = appointment.convertTo24Hour(endTime);
+          return (slotStart < appointmentEnd && slotEnd > appointmentStart);
         });
+        if (!hasConflict) {
+          availableSlots.push({ startTime, endTime, available: true });
+        }
       }
     }
 
@@ -659,6 +732,93 @@ const getStaffAvailability = async (req, res) => {
   }
 };
 
+// @desc    Create lecturer-defined slot
+// @route   POST /api/appointments/slots
+// @access  Private (Lecturers, Admins)
+const createSlot = async (req, res) => {
+  try {
+    const userRole = req.user.role;
+    const staffId = userRole === 'lecturer' ? req.user._id : (req.body.staffId || req.user._id);
+    const { date, startTime, endTime, location, notes } = req.body;
+
+    if (!date || !startTime || !endTime) {
+      return res.status(400).json({ success: false, message: 'Date, start time and end time are required' });
+    }
+
+    // Validate staff exists and is lecturer
+    const staff = await User.findById(staffId);
+    if (!staff || staff.role !== 'lecturer') {
+      return res.status(400).json({ success: false, message: 'Staff must be a lecturer' });
+    }
+
+    // Ensure slot does not overlap existing active slots
+    const toMinutes = (time) => {
+      const [t, mod] = time.split(' ');
+      let [h, m] = t.split(':');
+      h = parseInt(h);
+      if (mod === 'PM' && h !== 12) h += 12; else if (mod === 'AM' && h === 12) h = 0;
+      return h * 60 + parseInt(m);
+    };
+
+    const newStart = toMinutes(startTime);
+    const newEnd = toMinutes(endTime);
+
+    const sameDaySlots = await Slot.find({ staff: staffId, date: date, isActive: true });
+    const overlaps = sameDaySlots.some(s => {
+      const sStart = toMinutes(s.startTime);
+      const sEnd = toMinutes(s.endTime);
+      return newStart < sEnd && newEnd > sStart;
+    });
+    if (overlaps) {
+      return res.status(400).json({ success: false, message: 'Slot overlaps an existing slot' });
+    }
+
+    const slot = await Slot.create({ staff: staffId, date, startTime, endTime, location, notes, isActive: true });
+
+    res.status(201).json({ success: true, message: 'Slot created', data: { slot } });
+  } catch (error) {
+    console.error('Create slot error:', error);
+    res.status(500).json({ success: false, message: 'Error creating slot', error: error.message });
+  }
+};
+
+// @desc    Get slots for a staff and date
+// @route   GET /api/appointments/slots/:staffId/:date
+// @access  Private
+const getSlotsByDate = async (req, res) => {
+  try {
+    const { staffId, date } = req.params;
+    const slots = await Slot.find({ staff: staffId, date: date, isActive: true }).sort({ startTime: 1 });
+    res.status(200).json({ success: true, data: { slots } });
+  } catch (error) {
+    console.error('Get slots error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching slots', error: error.message });
+  }
+};
+
+// @desc    Deactivate a slot
+// @route   DELETE /api/appointments/slots/:id
+// @access  Private (Lecturers, Admins)
+const deleteSlot = async (req, res) => {
+  try {
+    const slot = await Slot.findById(req.params.id);
+    if (!slot) return res.status(404).json({ success: false, message: 'Slot not found' });
+
+    // Permission: lecturer owns the slot or admin
+    const isOwner = slot.staff.toString() === req.user._id.toString();
+    if (!(req.user.role === 'admin' || isOwner)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this slot' });
+    }
+
+    slot.isActive = false;
+    await slot.save();
+    res.status(200).json({ success: true, message: 'Slot deactivated', data: { slot } });
+  } catch (error) {
+    console.error('Delete slot error:', error);
+    res.status(500).json({ success: false, message: 'Error deleting slot', error: error.message });
+  }
+};
+
 module.exports = {
   createAppointment,
   getAppointmentsByRole,
@@ -669,5 +829,8 @@ module.exports = {
   completeAppointment,
   getAvailableStaff,
   getAppointmentStats,
-  getStaffAvailability
+  getStaffAvailability,
+  createSlot,
+  getSlotsByDate,
+  deleteSlot
 };

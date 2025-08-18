@@ -17,9 +17,6 @@ router.use(protect);
 // Create new ticket (Students, Lecturers, Admins)
 router.post('/', createTicket);
 
-// Get tickets by role
-router.get('/:role', getTicketsByRole);
-
 // Get single ticket
 router.get('/ticket/:id', getTicket);
 
@@ -34,5 +31,8 @@ router.get('/lecturers', getAvailableLecturers);
 
 // Get ticket statistics
 router.get('/stats/:role', getTicketStats);
+
+// Get tickets by role (must be last to avoid shadowing other routes)
+router.get('/:role', getTicketsByRole);
 
 module.exports = router; 

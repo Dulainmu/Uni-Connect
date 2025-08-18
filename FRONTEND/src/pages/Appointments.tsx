@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { appointmentService, Appointment, CreateAppointmentData, Staff } from "@/services/appointmentService";
+import { appointmentService, Appointment, CreateAppointmentData, Staff, AvailableSlot } from "@/services/appointmentService";
 import { 
   Plus, 
   Calendar as CalendarIcon,
@@ -45,6 +45,13 @@ interface AppointmentFormData {
   description?: string;
 }
 
+type SlotItem = {
+  _id: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+};
+
 const Appointments = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -60,6 +67,17 @@ const Appointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [date, setDate] = useState<Date>();
   const [cancellationReason, setCancellationReason] = useState('');
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  // Lecturer slot management state
+  const [slotDate, setSlotDate] = useState<Date>(new Date());
+  const [slotStartTime, setSlotStartTime] = useState<string>('');
+  const [slotEndTime, setSlotEndTime] = useState<string>('');
+  const [slotLocation, setSlotLocation] = useState<string>('');
+  const [slotNotes, setSlotNotes] = useState<string>('');
+  const [slotSubmitting, setSlotSubmitting] = useState<boolean>(false);
+  const [slotList, setSlotList] = useState<SlotItem[]>([]);
+  const [slotListLoading, setSlotListLoading] = useState<boolean>(false);
 
   const form = useForm<AppointmentFormData>({
     defaultValues: {
@@ -78,6 +96,9 @@ const Appointments = () => {
       description: ''
     }
   });
+
+  // Watch staff selection to trigger availability loading
+  const watchedStaffId = form.watch('staffId');
 
   // Fetch appointments and staff on component mount
   useEffect(() => {
@@ -107,6 +128,69 @@ const Appointments = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch lecturer slots for selected date
+  const fetchSlots = async () => {
+    if (!user?._id) return;
+    try {
+      setSlotListLoading(true);
+      const iso = slotDate.toISOString().split('T')[0];
+      const resp = await appointmentService.getSlots(user._id, iso);
+      setSlotList(resp.data.slots || []);
+    } catch (e) {
+      console.error('Error fetching slots', e);
+      setSlotList([]);
+    } finally {
+      setSlotListLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.role === 'lecturer') {
+      fetchSlots();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?._id, slotDate]);
+
+  const handleCreateSlot = async () => {
+    if (!user?._id || !slotDate || !slotStartTime || !slotEndTime) {
+      toast({ title: 'Error', description: 'Please provide date, start and end time.', variant: 'destructive' });
+      return;
+    }
+    try {
+      setSlotSubmitting(true);
+      const payload = {
+        date: slotDate.toISOString().split('T')[0],
+        startTime: slotStartTime,
+        endTime: slotEndTime,
+        location: slotLocation || undefined,
+        notes: slotNotes || undefined,
+      };
+      await appointmentService.createSlot(payload);
+      toast({ title: 'Slot created', description: 'Your slot has been added.' });
+      setSlotStartTime('');
+      setSlotEndTime('');
+      setSlotLocation('');
+      setSlotNotes('');
+      fetchSlots();
+    } catch (e: any) {
+      console.error('Create slot error', e);
+      toast({ title: 'Error', description: e.message || 'Failed to create slot.', variant: 'destructive' });
+    } finally {
+      setSlotSubmitting(false);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId: string) => {
+    try {
+      await appointmentService.deleteSlot(slotId);
+      toast({ title: 'Slot removed', description: 'The slot has been deactivated.' });
+      fetchSlots();
+    } catch (e: any) {
+      console.error('Delete slot error', e);
+      toast({ title: 'Error', description: e.message || 'Failed to remove slot.', variant: 'destructive' });
     }
   };
 
@@ -146,6 +230,31 @@ const Appointments = () => {
       setStaffLoading(false);
     }
   };
+
+  // Load availability when staff or date changes
+  useEffect(() => {
+    if (!watchedStaffId || !date) {
+      setAvailableSlots([]);
+      return;
+    }
+    const load = async () => {
+      try {
+        setSlotsLoading(true);
+        const iso = date.toISOString().split('T')[0];
+        const resp = await appointmentService.getStaffAvailability(watchedStaffId, iso);
+        setAvailableSlots(resp.data.availableSlots || []);
+        // reset times when availability changes
+        form.setValue('startTime', '');
+        form.setValue('endTime', '');
+      } catch (e) {
+        console.error('Failed to load availability', e);
+        setAvailableSlots([]);
+      } finally {
+        setSlotsLoading(false);
+      }
+    };
+    load();
+  }, [watchedStaffId, date]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -523,20 +632,28 @@ const Appointments = () => {
                     <FormField
                       control={form.control}
                       name="startTime"
-                      rules={{ required: 'Start time is required' }}
+                      rules={{ required: 'Please select an available slot' }}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Start Time</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormLabel>Available Slots</FormLabel>
+                          <Select
+                            onValueChange={(val) => {
+                              const [s, e] = val.split('|');
+                              field.onChange(s);
+                              form.setValue('endTime', e);
+                            }}
+                            defaultValue={field.value}
+                            disabled={slotsLoading || availableSlots.length === 0}
+                          >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select start time" />
+                                <SelectValue placeholder={slotsLoading ? 'Loading slots...' : (availableSlots.length ? 'Select a slot' : 'No slots available')} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {timeSlots.map((time) => (
-                                <SelectItem key={time} value={time}>
-                                  {time}
+                              {availableSlots.map((slot, i) => (
+                                <SelectItem key={`${slot.startTime}-${slot.endTime}-${i}`} value={`${slot.startTime}|${slot.endTime}`}>
+                                  {slot.startTime} - {slot.endTime}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -548,24 +665,12 @@ const Appointments = () => {
                     <FormField
                       control={form.control}
                       name="endTime"
-                      rules={{ required: 'End time is required' }}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>End Time</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select end time" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {timeSlots.map((time) => (
-                                <SelectItem key={time} value={time}>
-                                  {time}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Ends</FormLabel>
+                          <FormControl>
+                            <Input readOnly placeholder="Select a slot above" value={field.value || ''} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -646,6 +751,122 @@ const Appointments = () => {
               </DialogContent>
             </Dialog>
           </div>
+
+          {user?.role === 'lecturer' && (
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Manage Time Slots</CardTitle>
+                <CardDescription>
+                  Define your availability. Students can only book within these slots for a given date.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !slotDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {slotDate ? format(slotDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={slotDate}
+                          onSelect={(d) => d && setSlotDate(d)}
+                          disabled={(d) => d < new Date()}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Start</Label>
+                      <Select onValueChange={setSlotStartTime} defaultValue={slotStartTime}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Start time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeSlots.map((time) => (
+                            <SelectItem key={`s-${time}`} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>End</Label>
+                      <Select onValueChange={setSlotEndTime} defaultValue={slotEndTime}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="End time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeSlots.map((time) => (
+                            <SelectItem key={`e-${time}`} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label>Location (optional)</Label>
+                    <Input value={slotLocation} onChange={(e) => setSlotLocation(e.target.value)} placeholder="e.g., Room 101" />
+                  </div>
+                  <div>
+                    <Label>Notes (optional)</Label>
+                    <Textarea value={slotNotes} onChange={(e) => setSlotNotes(e.target.value)} placeholder="Office hours, consultation, etc." />
+                  </div>
+                </div>
+                <div className="flex justify-end mb-6">
+                  <Button onClick={handleCreateSlot} disabled={slotSubmitting}>
+                    {slotSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Add Slot'
+                    )}
+                  </Button>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Slots for {format(slotDate, 'PPP')}</h4>
+                  {slotListLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Loading slots...
+                    </div>
+                  ) : slotList.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No slots defined for this date.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {slotList.map((s) => (
+                        <div key={s._id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div className="text-sm">
+                            <div className="font-medium">{s.startTime} - {s.endTime}</div>
+                            {s.location && <div className="text-muted-foreground">{s.location}</div>}
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteSlot(s._id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Appointments List */}
           <Card>

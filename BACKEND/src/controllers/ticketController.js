@@ -22,13 +22,61 @@ const createTicket = async (req, res) => {
       });
     }
 
+    // Auto-assign logic (auto-routing)
+    // Assumption: Only 'academic' tickets are auto-assigned to lecturers.
+    // Strategy: pick the active lecturer with the lowest number of open/in_progress tickets.
+    let autoAssignedLecturerId = null;
+    if (category === 'academic') {
+      try {
+        const activeLecturers = await User.find({ role: 'lecturer', isActive: true })
+          .select('_id firstName lastName email');
+
+        if (activeLecturers && activeLecturers.length > 0) {
+          const workloads = await Ticket.aggregate([
+            {
+              $match: {
+                assignedTo: { $ne: null },
+                status: { $in: ['open', 'in_progress'] }
+              }
+            },
+            { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
+          ]);
+
+          const lecturerIdToCount = new Map(
+            workloads.map(w => [String(w._id), w.count])
+          );
+
+          let chosenLecturerId = null;
+          let minCount = Number.POSITIVE_INFINITY;
+          for (const lecturer of activeLecturers) {
+            const currentCount = lecturerIdToCount.get(String(lecturer._id)) || 0;
+            if (currentCount < minCount) {
+              minCount = currentCount;
+              chosenLecturerId = lecturer._id;
+            }
+          }
+
+          autoAssignedLecturerId = chosenLecturerId;
+          console.log('Auto-assignment selected lecturer:', {
+            lecturerId: autoAssignedLecturerId,
+            workload: minCount
+          });
+        } else {
+          console.log('No active lecturers available for auto-assignment.');
+        }
+      } catch (assignmentError) {
+        console.error('Auto-assignment error (proceeding without assignment):', assignmentError);
+      }
+    }
+
     console.log('Creating ticket with data:', {
       title,
       description,
       category,
       priority: priority || 'medium',
       department,
-      submittedBy: req.user._id
+      submittedBy: req.user._id,
+      ...(autoAssignedLecturerId && { assignedTo: autoAssignedLecturerId })
     });
 
     // Create ticket
@@ -38,13 +86,17 @@ const createTicket = async (req, res) => {
       category,
       priority: priority || 'medium',
       department,
-      submittedBy: req.user._id
+      submittedBy: req.user._id,
+      ...(autoAssignedLecturerId && { assignedTo: autoAssignedLecturerId })
     });
 
     console.log('Ticket created successfully:', ticket);
 
     // Populate user information
     await ticket.populate('submittedBy', 'firstName lastName email role');
+    if (ticket.assignedTo) {
+      await ticket.populate('assignedTo', 'firstName lastName email role');
+    }
 
     res.status(201).json({
       success: true,

@@ -202,6 +202,21 @@ class AppointmentService {
   async getStaffAvailability(staffId: string, date: string): Promise<{ success: boolean; data: StaffAvailability }> {
     return this.makeRequest(`/availability/${staffId}/${date}`);
   }
+
+  // Create lecturer-defined slot
+  async createSlot(payload: { staffId?: string; date: string; startTime: string; endTime: string; location?: string; notes?: string }): Promise<{ success: boolean; data: any }> {
+    return this.makeRequest(`/slots`, { method: 'POST', body: JSON.stringify(payload) });
+  }
+
+  // Get slots for a lecturer/date
+  async getSlots(staffId: string, date: string): Promise<{ success: boolean; data: { slots: Array<{ _id: string; startTime: string; endTime: string; location?: string }> } }> {
+    return this.makeRequest(`/slots/${staffId}/${date}`);
+  }
+
+  // Delete slot
+  async deleteSlot(slotId: string): Promise<{ success: boolean; data: any }> {
+    return this.makeRequest(`/slots/${slotId}`, { method: 'DELETE' });
+  }
 }
 
 export const appointmentService = new AppointmentService();
