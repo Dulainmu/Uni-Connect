@@ -165,6 +165,18 @@ class AuthService {
   getToken(): string | null {
     return localStorage.getItem('token');
   }
+
+  // Get all users (admin only)
+  async getAllUsers(): Promise<{ success: boolean; count: number; data: { users: User[] } }> {
+    const response = await api.get('/auth/users');
+    return response.data;
+  }
+
+  // Update user (admin only)
+  async updateUser(userId: string, data: Partial<User>): Promise<{ success: boolean; data: { user: User } }> {
+    const response = await api.put(`/auth/users/${userId}`, data);
+    return response.data;
+  }
 }
 
 export const authService = new AuthService();

@@ -64,6 +64,7 @@ app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/test', require('./src/routes/test')); // Test routes for role-based access
 app.use('/api/chat', require('./src/routes/chat')); // Chat routes
 app.use('/api/announcements', require('./src/routes/announcements')); // Announcement routes
+app.use('/api/admin', require('./src/routes/admin')); // Admin routes
 // TODO: Add other route files here
 // app.use('/api/users', require('./src/routes/users'));
 app.use('/api/tickets', require('./src/routes/tickets'));

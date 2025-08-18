@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,11 +25,23 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth();
   const { toast } = useToast();
 
   // Get the intended destination from location state
   const from = (location.state as any)?.from?.pathname || "/dashboard";
+
+  // Handle redirect after successful login/registration
+  useEffect(() => {
+    if (user && !isLoading) {
+      console.log('User logged in:', user.role, 'Redirecting to:', user.role === 'admin' ? '/admin' : from);
+      if (user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
+    }
+  }, [user, isLoading, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +70,7 @@ const Login = () => {
           description: "Account created successfully!",
         });
       }
-      navigate(from, { replace: true });
+      // Navigation will be handled by useEffect when user state updates
     } catch (error: any) {
       toast({
         title: "Error",
@@ -84,11 +96,11 @@ const Login = () => {
         <Card className="shadow-card border-border/50">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">
-              {isLogin ? "Lecturer Login" : "Create Account"}
+              {isLogin ? "Login" : "Create Account"}
             </CardTitle>
             <CardDescription>
               {isLogin 
-                ? "Connect with your lecturers and peers"
+                ? "Sign in to your UniConnect account"
                 : "Join the UniConnect community"
               }
             </CardDescription>

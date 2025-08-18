@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SocketProvider } from "./contexts/SocketContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -14,6 +15,13 @@ import Tickets from "./pages/Tickets";
 import Appointments from "./pages/Appointments";
 import Announcements from "./pages/Announcements";
 import NotFound from "./pages/NotFound";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import TicketManagement from "./pages/admin/TicketManagement";
+import Analytics from "./pages/admin/Analytics";
+import AnnouncementManagement from "./pages/admin/AnnouncementManagement";
+import AdminTest from "./pages/admin/AdminTest";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +61,19 @@ const App = () => (
                   <Announcements />
                 </ProtectedRoute>
               } />
+              {/* Admin Routes */}
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="tickets" element={<TicketManagement />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="announcements" element={<AnnouncementManagement />} />
+                <Route path="test" element={<AdminTest />} />
+              </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
