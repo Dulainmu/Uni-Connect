@@ -1,6 +1,7 @@
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const Slot = require('../models/Slot');
+const { convertToMinutes, convertTo12Hour } = require('../utils/timeUtils');
 
 // @desc    Create new appointment
 // @route   POST /api/appointments
@@ -10,15 +11,15 @@ const createAppointment = async (req, res) => {
   try {
     console.log('Create appointment request body:', req.body);
     console.log('User from request:', req.user);
-    
-    const { 
-      staffId, 
-      date, 
-      startTime, 
-      endTime, 
-      location, 
-      purpose, 
-      description 
+
+    const {
+      staffId,
+      date,
+      startTime,
+      endTime,
+      location,
+      purpose,
+      description
     } = req.body;
 
     // Validate required fields
@@ -50,18 +51,12 @@ const createAppointment = async (req, res) => {
     // If lecturer-defined slots exist for this date, ensure requested time fits within a slot
     const existingSlots = await Slot.find({ staff: staffId, date: date, isActive: true });
     if (existingSlots.length > 0) {
-      const toMinutes = (time) => {
-        const [t, mod] = time.split(' ');
-        let [h, m] = t.split(':');
-        h = parseInt(h);
-        if (mod === 'PM' && h !== 12) h += 12; else if (mod === 'AM' && h === 12) h = 0;
-        return h * 60 + parseInt(m);
-      };
-      const reqStart = toMinutes(startTime);
-      const reqEnd = toMinutes(endTime);
+
+      const reqStart = convertToMinutes(startTime);
+      const reqEnd = convertToMinutes(endTime);
       const fitsAnySlot = existingSlots.some(slot => {
-        const slotStart = toMinutes(slot.startTime);
-        const slotEnd = toMinutes(slot.endTime);
+        const slotStart = convertToMinutes(slot.startTime);
+        const slotEnd = convertToMinutes(slot.endTime);
         return reqStart >= slotStart && reqEnd <= slotEnd;
       });
       if (!fitsAnySlot) {
@@ -208,7 +203,7 @@ const getAppointment = async (req, res) => {
     }
 
     // Check if user has permission to view this appointment
-    const canView = 
+    const canView =
       req.user.role === 'admin' ||
       appointment.student._id.toString() === req.user._id.toString() ||
       appointment.staff._id.toString() === req.user._id.toString();
@@ -241,15 +236,15 @@ const getAppointment = async (req, res) => {
 // @access  Private
 const updateAppointment = async (req, res) => {
   try {
-    const { 
-      date, 
-      startTime, 
-      endTime, 
-      location, 
-      purpose, 
-      description, 
-      notes, 
-      status 
+    const {
+      date,
+      startTime,
+      endTime,
+      location,
+      purpose,
+      description,
+      notes,
+      status
     } = req.body;
     const appointmentId = req.params.id;
 
@@ -265,7 +260,7 @@ const updateAppointment = async (req, res) => {
     }
 
     // Check if user has permission to update this appointment
-    const canUpdate = 
+    const canUpdate =
       req.user.role === 'admin' ||
       appointment.student._id.toString() === req.user._id.toString() ||
       appointment.staff._id.toString() === req.user._id.toString();
@@ -285,13 +280,13 @@ const updateAppointment = async (req, res) => {
       const staffId = appointment.staff._id;
 
       const hasConflict = await Appointment.checkTimeConflict(
-        staffId, 
-        checkDate, 
-        checkStartTime, 
-        checkEndTime, 
+        staffId,
+        checkDate,
+        checkStartTime,
+        checkEndTime,
         appointmentId
       );
-      
+
       if (hasConflict) {
         return res.status(400).json({
           success: false,
@@ -354,7 +349,7 @@ const cancelAppointment = async (req, res) => {
     }
 
     // Check if user has permission to cancel this appointment
-    const canCancel = 
+    const canCancel =
       req.user.role === 'admin' ||
       appointment.student._id.toString() === req.user._id.toString() ||
       appointment.staff._id.toString() === req.user._id.toString();
@@ -425,7 +420,7 @@ const confirmAppointment = async (req, res) => {
     }
 
     // Check if user has permission to confirm this appointment
-    const canConfirm = 
+    const canConfirm =
       req.user.role === 'admin' ||
       appointment.staff._id.toString() === req.user._id.toString();
 
@@ -483,7 +478,7 @@ const completeAppointment = async (req, res) => {
     }
 
     // Check if user has permission to complete this appointment
-    const canComplete = 
+    const canComplete =
       req.user.role === 'admin' ||
       appointment.staff._id.toString() === req.user._id.toString();
 
@@ -527,9 +522,9 @@ const completeAppointment = async (req, res) => {
 // @access  Private
 const getAvailableStaff = async (req, res) => {
   try {
-    const staff = await User.find({ 
-      role: 'lecturer', 
-      isActive: true 
+    const staff = await User.find({
+      role: 'lecturer',
+      isActive: true
     })
       .select('firstName lastName email department')
       .sort({ firstName: 1, lastName: 1 });
@@ -634,22 +629,16 @@ const getStaffAvailability = async (req, res) => {
     const slots = await Slot.find({ staff: staffId, date: date, isActive: true }).sort({ startTime: 1 });
 
     let availableSlots = [];
+
     if (slots.length > 0) {
       // Remove parts of slots that are occupied by appointments; return remaining slot ranges
-      const toMinutes = (time) => {
-        const [t, mod] = time.split(' ');
-        let [h, m] = t.split(':');
-        h = parseInt(h);
-        if (mod === 'PM' && h !== 12) h += 12; else if (mod === 'AM' && h === 12) h = 0;
-        return h * 60 + parseInt(m);
-      };
 
       // Build occupied intervals from appointments
-      const occupied = appointments.map(a => ({ start: toMinutes(a.startTime), end: toMinutes(a.endTime) }));
+      const occupied = appointments.map(a => ({ start: convertToMinutes(a.startTime), end: convertToMinutes(a.endTime) }));
 
       for (const slot of slots) {
-        const sStart = toMinutes(slot.startTime);
-        const sEnd = toMinutes(slot.endTime);
+        const sStart = convertToMinutes(slot.startTime);
+        const sEnd = convertToMinutes(slot.endTime);
         // Start with the full slot, subtract occupied intervals
         let fragments = [{ start: sStart, end: sEnd }];
         for (const occ of occupied) {
@@ -672,17 +661,9 @@ const getStaffAvailability = async (req, res) => {
           fragments = nextFragments;
         }
         // Convert fragments back to HH:MM AM/PM boundaries rounded to hour marks
-        const toLabel = (mins) => {
-          let h = Math.floor(mins / 60);
-          const m = mins % 60;
-          const mod = h >= 12 ? 'PM' : 'AM';
-          if (h === 0) h = 12; else if (h > 12) h = h - 12;
-          const mm = m.toString().padStart(2, '0');
-          return `${h}:${mm} ${mod}`;
-        };
         for (const f of fragments) {
           if (f.end - f.start >= 30) { // expose fragments of at least 30 minutes
-            availableSlots.push({ startTime: toLabel(f.start), endTime: toLabel(f.end), available: true });
+            availableSlots.push({ startTime: convertTo12Hour(f.start), endTime: convertTo12Hour(f.end), available: true });
           }
         }
       }
@@ -697,10 +678,10 @@ const getStaffAvailability = async (req, res) => {
         const startTime = businessHours[i];
         const endTime = businessHours[i + 1];
         const hasConflict = appointments.some(appointment => {
-          const appointmentStart = appointment.convertTo24Hour(appointment.startTime);
-          const appointmentEnd = appointment.convertTo24Hour(appointment.endTime);
-          const slotStart = appointment.convertTo24Hour(startTime);
-          const slotEnd = appointment.convertTo24Hour(endTime);
+          const appointmentStart = convertToMinutes(appointment.startTime);
+          const appointmentEnd = convertToMinutes(appointment.endTime);
+          const slotStart = convertToMinutes(startTime);
+          const slotEnd = convertToMinutes(endTime);
           return (slotStart < appointmentEnd && slotEnd > appointmentStart);
         });
         if (!hasConflict) {
@@ -752,21 +733,13 @@ const createSlot = async (req, res) => {
     }
 
     // Ensure slot does not overlap existing active slots
-    const toMinutes = (time) => {
-      const [t, mod] = time.split(' ');
-      let [h, m] = t.split(':');
-      h = parseInt(h);
-      if (mod === 'PM' && h !== 12) h += 12; else if (mod === 'AM' && h === 12) h = 0;
-      return h * 60 + parseInt(m);
-    };
-
-    const newStart = toMinutes(startTime);
-    const newEnd = toMinutes(endTime);
+    const newStart = convertToMinutes(startTime);
+    const newEnd = convertToMinutes(endTime);
 
     const sameDaySlots = await Slot.find({ staff: staffId, date: date, isActive: true });
     const overlaps = sameDaySlots.some(s => {
-      const sStart = toMinutes(s.startTime);
-      const sEnd = toMinutes(s.endTime);
+      const sStart = convertToMinutes(s.startTime);
+      const sEnd = convertToMinutes(s.endTime);
       return newStart < sEnd && newEnd > sStart;
     });
     if (overlaps) {

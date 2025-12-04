@@ -12,11 +12,11 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
-  GraduationCap
+  Bell
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import Logo from "@/components/Logo";
 
 const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -48,7 +48,7 @@ const AdminLayout = () => {
     { name: "Tickets", href: "/admin/tickets", icon: Ticket },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
-    { name: "Test", href: "/admin/test", icon: Settings },
+    // { name: "Test", href: "/admin/test", icon: Settings },
   ];
 
   const isActive = (href: string) => {
@@ -66,10 +66,13 @@ const AdminLayout = () => {
         <div className="flex items-center justify-between p-4 border-b border-border">
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <Logo size={32} />
               <span className="text-xl font-bold text-foreground">UniConnect</span>
+            </div>
+          )}
+          {sidebarCollapsed && (
+            <div className="flex items-center justify-center w-full">
+              <Logo size={24} />
             </div>
           )}
           <Button

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, MessageSquare, Users, BookOpen, Calendar } from "lucide-react";
+import { MessageSquare, Users, BookOpen, Calendar } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const Index = () => {
   return (
@@ -10,9 +11,7 @@ const Index = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <Logo size={32} />
               <span className="text-2xl font-bold text-foreground">UniConnect</span>
             </div>
             <Link to="/login">
@@ -86,9 +85,7 @@ const Index = () => {
         <div className="container mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-                <GraduationCap className="w-4 h-4 text-primary-foreground" />
-              </div>
+              <Logo size={24} />
               <span className="text-lg font-bold">UniConnect</span>
             </div>
             <p className="text-sm text-muted-foreground">

@@ -13,7 +13,7 @@ const testUser = {
 
 const testAppointment = {
   staffId: '', // Will be set after getting available staff
-  date: '2024-10-28',
+  date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
   startTime: '9:00 AM',
   endTime: '10:00 AM',
   location: 'Room 301',
@@ -48,10 +48,10 @@ const makeRequest = async (method, endpoint, data = null) => {
 // Test functions
 const testAuthentication = async () => {
   console.log('\n🔐 Testing Authentication...');
-  
+
   try {
     const response = await axios.post(`${BASE_URL}/auth/login`, testUser);
-    authToken = response.data.data.token;
+    authToken = response.data.token;
     console.log('✅ Authentication successful');
     console.log('Token received:', authToken.substring(0, 20) + '...');
     return true;
@@ -63,17 +63,17 @@ const testAuthentication = async () => {
 
 const testGetAvailableStaff = async () => {
   console.log('\n👥 Testing Get Available Staff...');
-  
+
   try {
     const response = await makeRequest('GET', '/appointments/staff');
     console.log('✅ Available staff retrieved successfully');
     console.log('Staff count:', response.count);
-    
+
     if (response.data.staff.length > 0) {
       testAppointment.staffId = response.data.staff[0]._id;
       console.log('Selected staff:', response.data.staff[0].firstName, response.data.staff[0].lastName);
     }
-    
+
     return response.data.staff.length > 0;
   } catch (error) {
     console.error('❌ Failed to get available staff');
@@ -83,18 +83,18 @@ const testGetAvailableStaff = async () => {
 
 const testCreateAppointment = async () => {
   console.log('\n📅 Testing Create Appointment...');
-  
+
   if (!testAppointment.staffId) {
     console.log('❌ No staff available for appointment creation');
     return false;
   }
-  
+
   try {
     const response = await makeRequest('POST', '/appointments', testAppointment);
     console.log('✅ Appointment created successfully');
     console.log('Appointment ID:', response.data.appointment._id);
     console.log('Status:', response.data.appointment.status);
-    
+
     testAppointmentId = response.data.appointment._id;
     return true;
   } catch (error) {
@@ -105,12 +105,12 @@ const testCreateAppointment = async () => {
 
 const testGetAppointmentsByRole = async () => {
   console.log('\n📋 Testing Get Appointments by Role...');
-  
+
   try {
     const response = await makeRequest('GET', '/appointments/student');
     console.log('✅ Appointments retrieved successfully');
     console.log('Appointment count:', response.count);
-    
+
     if (response.data.appointments.length > 0) {
       const appointment = response.data.appointments[0];
       console.log('First appointment:', {
@@ -120,7 +120,7 @@ const testGetAppointmentsByRole = async () => {
         status: appointment.status
       });
     }
-    
+
     return true;
   } catch (error) {
     console.error('❌ Failed to get appointments');
@@ -130,12 +130,12 @@ const testGetAppointmentsByRole = async () => {
 
 const testGetSingleAppointment = async () => {
   console.log('\n🔍 Testing Get Single Appointment...');
-  
+
   if (!testAppointmentId) {
     console.log('❌ No appointment ID available');
     return false;
   }
-  
+
   try {
     const response = await makeRequest('GET', `/appointments/ticket/${testAppointmentId}`);
     console.log('✅ Single appointment retrieved successfully');
@@ -148,7 +148,7 @@ const testGetSingleAppointment = async () => {
       purpose: response.data.appointment.purpose,
       status: response.data.appointment.status
     });
-    
+
     return true;
   } catch (error) {
     console.error('❌ Failed to get single appointment');
@@ -158,23 +158,23 @@ const testGetSingleAppointment = async () => {
 
 const testUpdateAppointment = async () => {
   console.log('\n✏️ Testing Update Appointment...');
-  
+
   if (!testAppointmentId) {
     console.log('❌ No appointment ID available');
     return false;
   }
-  
+
   const updateData = {
     location: 'Room 205',
     description: 'Updated test appointment description'
   };
-  
+
   try {
     const response = await makeRequest('PUT', `/appointments/${testAppointmentId}`, updateData);
     console.log('✅ Appointment updated successfully');
     console.log('Updated location:', response.data.appointment.location);
     console.log('Updated description:', response.data.appointment.description);
-    
+
     return true;
   } catch (error) {
     console.error('❌ Failed to update appointment');
@@ -184,7 +184,7 @@ const testUpdateAppointment = async () => {
 
 const testGetAppointmentStats = async () => {
   console.log('\n📊 Testing Get Appointment Statistics...');
-  
+
   try {
     const response = await makeRequest('GET', '/appointments/stats/student');
     console.log('✅ Appointment statistics retrieved successfully');
@@ -195,7 +195,7 @@ const testGetAppointmentStats = async () => {
       completed: response.data.completed,
       cancelled: response.data.cancelled
     });
-    
+
     return true;
   } catch (error) {
     console.error('❌ Failed to get appointment statistics');
@@ -205,12 +205,12 @@ const testGetAppointmentStats = async () => {
 
 const testGetStaffAvailability = async () => {
   console.log('\n⏰ Testing Get Staff Availability...');
-  
+
   if (!testAppointment.staffId) {
     console.log('❌ No staff ID available');
     return false;
   }
-  
+
   try {
     const response = await makeRequest('GET', `/appointments/availability/${testAppointment.staffId}/${testAppointment.date}`);
     console.log('✅ Staff availability retrieved successfully');
@@ -218,7 +218,7 @@ const testGetStaffAvailability = async () => {
     console.log('Date:', response.data.date);
     console.log('Available slots:', response.data.availableSlots.length);
     console.log('Existing appointments:', response.data.appointments.length);
-    
+
     return true;
   } catch (error) {
     console.error('❌ Failed to get staff availability');
@@ -228,22 +228,22 @@ const testGetStaffAvailability = async () => {
 
 const testCancelAppointment = async () => {
   console.log('\n❌ Testing Cancel Appointment...');
-  
+
   if (!testAppointmentId) {
     console.log('❌ No appointment ID available');
     return false;
   }
-  
+
   const cancelData = {
     reason: 'Test cancellation - no longer needed'
   };
-  
+
   try {
     const response = await makeRequest('POST', `/appointments/${testAppointmentId}/cancel`, cancelData);
     console.log('✅ Appointment cancelled successfully');
     console.log('Cancellation reason:', response.data.appointment.cancellationReason);
     console.log('Cancelled by:', response.data.appointment.cancelledBy ? 'User' : 'Unknown');
-    
+
     return true;
   } catch (error) {
     console.error('❌ Failed to cancel appointment');
@@ -254,7 +254,7 @@ const testCancelAppointment = async () => {
 // Main test runner
 const runTests = async () => {
   console.log('🚀 Starting Appointment System Tests...\n');
-  
+
   const tests = [
     { name: 'Authentication', fn: testAuthentication },
     { name: 'Get Available Staff', fn: testGetAvailableStaff },
@@ -266,10 +266,10 @@ const runTests = async () => {
     { name: 'Get Staff Availability', fn: testGetStaffAvailability },
     { name: 'Cancel Appointment', fn: testCancelAppointment }
   ];
-  
+
   let passedTests = 0;
   let totalTests = tests.length;
-  
+
   for (const test of tests) {
     try {
       const result = await test.fn();
@@ -280,11 +280,11 @@ const runTests = async () => {
       console.error(`❌ Test "${test.name}" failed with error:`, error.message);
     }
   }
-  
+
   console.log('\n📋 Test Results Summary:');
   console.log(`✅ Passed: ${passedTests}/${totalTests}`);
   console.log(`❌ Failed: ${totalTests - passedTests}/${totalTests}`);
-  
+
   if (passedTests === totalTests) {
     console.log('\n🎉 All tests passed! Appointment system is working correctly.');
   } else {

@@ -152,8 +152,8 @@ const TicketManagement = () => {
     const matchesSearch = 
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.submittedBy.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.submittedBy.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.submittedBy?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+      (ticket.submittedBy?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
       ticket.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
@@ -307,14 +307,20 @@ const TicketManagement = () => {
                       <div className="flex items-center space-x-2">
                         <Avatar className="w-8 h-8">
                           <AvatarFallback className="bg-muted text-foreground text-xs">
-                            {ticket.submittedBy.firstName.charAt(0)}{ticket.submittedBy.lastName.charAt(0)}
+                            {ticket.submittedBy ? 
+                              `${ticket.submittedBy.firstName?.charAt(0) || ''}${ticket.submittedBy.lastName?.charAt(0) || ''}` : 
+                              'U'
+                            }
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="text-sm text-foreground">
-                            {ticket.submittedBy.firstName} {ticket.submittedBy.lastName}
+                            {ticket.submittedBy ? 
+                              `${ticket.submittedBy.firstName || ''} ${ticket.submittedBy.lastName || ''}` : 
+                              'Unknown User'
+                            }
                           </div>
-                          {ticket.submittedBy.studentId && (
+                          {ticket.submittedBy?.studentId && (
                             <div className="text-xs text-muted-foreground">ID: {ticket.submittedBy.studentId}</div>
                           )}
                         </div>
@@ -472,14 +478,17 @@ const TicketManagement = () => {
               <div>
                 <Label className="text-muted-foreground">Submitted By</Label>
                 <p className="text-foreground">
-                  {selectedTicket.submittedBy.firstName} {selectedTicket.submittedBy.lastName} ({selectedTicket.submittedBy.email})
+                  {selectedTicket.submittedBy ? 
+                    `${selectedTicket.submittedBy.firstName || ''} ${selectedTicket.submittedBy.lastName || ''} (${selectedTicket.submittedBy.email || 'No email'})` : 
+                    'Unknown User'
+                  }
                 </p>
               </div>
               {selectedTicket.assignedTo && (
                 <div>
                   <Label className="text-muted-foreground">Assigned To</Label>
                   <p className="text-foreground">
-                    {selectedTicket.assignedTo.firstName} {selectedTicket.assignedTo.lastName} ({selectedTicket.assignedTo.email})
+                    {selectedTicket.assignedTo.firstName || ''} {selectedTicket.assignedTo.lastName || ''} ({selectedTicket.assignedTo.email || 'No email'})
                   </p>
                 </div>
               )}
@@ -495,7 +504,7 @@ const TicketManagement = () => {
                       <div key={comment._id} className="bg-input p-3 rounded">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium text-foreground">
-                            {comment.user.firstName} {comment.user.lastName}
+                            {comment.user ? `${comment.user.firstName || ''} ${comment.user.lastName || ''}` : 'Unknown User'}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {new Date(comment.createdAt).toLocaleString()}

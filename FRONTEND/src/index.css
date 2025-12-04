@@ -8,106 +8,93 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 20% 6%;
-    --foreground: 210 40% 98%;
+    /* Cosmic Glass Theme - Light Mode (Clean & Crisp) */
+    --background: 240 20% 98%;
+    --foreground: 240 10% 10%;
 
-    --card: 210 20% 8%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
 
-    --popover: 210 20% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 10%;
 
-    --primary: 84 100% 65%;
-    --primary-foreground: 210 20% 6%;
+    /* Vibrant Violet Primary */
+    --primary: 265 89% 66%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 12%;
-    --secondary-foreground: 210 40% 85%;
+    /* Hot Pink Secondary */
+    --secondary: 310 90% 65%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 20% 12%;
-    --muted-foreground: 210 20% 65%;
+    --muted: 240 20% 96%;
+    --muted-foreground: 240 10% 50%;
 
-    --accent: 84 100% 65%;
-    --accent-foreground: 210 20% 6%;
+    --accent: 265 89% 66%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 210 20% 18%;
-    --input: 210 20% 12%;
-    --ring: 84 100% 65%;
+    --border: 240 20% 90%;
+    --input: 240 20% 90%;
+    --ring: 265 89% 66%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* UniConnect brand colors */
-    --brand-green: 84 100% 65%;
-    --brand-green-dark: 84 100% 55%;
-    --brand-dark: 210 20% 6%;
-    --brand-darker: 210 25% 4%;
-    
-    /* Gradients */
-    --gradient-brand: linear-gradient(135deg, hsl(var(--brand-green)), hsl(var(--brand-green-dark)));
-    --gradient-dark: linear-gradient(180deg, hsl(var(--brand-dark)), hsl(var(--brand-darker)));
-    
-    /* Shadows */
-    --shadow-brand: 0 10px 30px -10px hsl(var(--brand-green) / 0.3);
-    --shadow-card: 0 4px 20px -4px hsl(210 25% 2% / 0.4);
-    
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar specific */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 40%;
+    --sidebar-primary: 265 89% 66%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 20% 96%;
+    --sidebar-accent-foreground: 265 89% 66%;
+    --sidebar-border: 240 20% 90%;
+    --sidebar-ring: 265 89% 66%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Cosmic Glass Theme - Dark Mode (Deep Space) */
+    --background: 240 30% 6%;
+    /* Deep Blue-Black */
+    --foreground: 0 0% 100%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 25% 10%;
+    /* Glassy Blue-Black */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 25% 10%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Neon Violet Primary */
+    --primary: 265 89% 66%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    /* Neon Pink Secondary */
+    --secondary: 310 90% 65%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 25% 15%;
+    --muted-foreground: 240 10% 70%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 265 89% 66%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 240 25% 20%;
+    --input: 240 25% 20%;
+    --ring: 265 89% 66%;
+
+    /* Sidebar specific */
+    --sidebar-background: 240 25% 8%;
+    --sidebar-foreground: 240 10% 70%;
+    --sidebar-primary: 265 89% 66%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 240 25% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 25% 20%;
+    --sidebar-ring: 265 89% 66%;
   }
 }
 
@@ -117,6 +104,20 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  .glass-card {
+    @apply bg-card/50 backdrop-blur-md border border-border/50 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
   }
 }

@@ -15,7 +15,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
     if (!isLoading && user && user.role !== 'admin') {
       toast({
         title: "Access Denied",
-        description: "You don't have permission to access the admin panel.",
+        description: "You don't have permission to access the admin panel. Admin role required.",
         variant: "destructive",
       });
     }
@@ -24,7 +24,10 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground text-lg">Loading admin panel...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="text-foreground text-lg">Loading admin panel...</div>
+        </div>
       </div>
     );
   }

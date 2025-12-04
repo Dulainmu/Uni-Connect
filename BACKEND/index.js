@@ -9,14 +9,22 @@ require('dotenv').config();
 
 // Set default JWT_SECRET if not provided
 if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = 'your-super-secret-jwt-key-change-this-in-production';
-  console.log('Warning: JWT_SECRET not found in environment, using default value');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET is not defined in environment variables');
+    process.exit(1);
+  }
+  process.env.JWT_SECRET = 'dev-secret-key-change-this';
+  console.warn('Warning: JWT_SECRET not found, using default development key');
 }
 
 // Set default MONGODB_URI if not provided
 if (!process.env.MONGODB_URI) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: MONGODB_URI is not defined in environment variables');
+    process.exit(1);
+  }
   process.env.MONGODB_URI = 'mongodb://localhost:27017/campus-connect';
-  console.log('Warning: MONGODB_URI not found in environment, using default value');
+  console.warn('Warning: MONGODB_URI not found, using default local database');
 }
 
 // Log environment configuration
@@ -52,8 +60,8 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });

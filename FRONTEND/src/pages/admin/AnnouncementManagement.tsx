@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -874,7 +875,10 @@ const AnnouncementManagement = () => {
               <div>
                 <Label className="text-muted-foreground">Author</Label>
                 <p className="text-foreground">
-                  {selectedAnnouncement.author.firstName} {selectedAnnouncement.author.lastName} ({selectedAnnouncement.author.email})
+                  {selectedAnnouncement.author ? 
+                    `${selectedAnnouncement.author.firstName || ''} ${selectedAnnouncement.author.lastName || ''} (${selectedAnnouncement.author.email || 'No email'})` : 
+                    'Unknown Author'
+                  }
                 </p>
               </div>
             </div>
