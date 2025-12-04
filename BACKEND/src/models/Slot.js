@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { convertToMinutes } = require('../utils/timeUtils');
 
 const slotSchema = new mongoose.Schema({
   staff: {
@@ -14,7 +15,7 @@ const slotSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Start time is required'],
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return /^(0?[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/.test(v);
       },
       message: 'Start time must be in HH:MM AM/PM format'
@@ -24,7 +25,7 @@ const slotSchema = new mongoose.Schema({
     type: String,
     required: [true, 'End time is required'],
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return /^(0?[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/.test(v);
       },
       message: 'End time must be in HH:MM AM/PM format'
@@ -48,24 +49,13 @@ const slotSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Helper to convert 12h to minutes since midnight
-slotSchema.methods.convertTo24Hour = function(time12h) {
-  const [time, modifier] = time12h.split(' ');
-  let [hours, minutes] = time.split(':');
-  hours = parseInt(hours);
-  if (modifier === 'PM' && hours !== 12) {
-    hours += 12;
-  } else if (modifier === 'AM' && hours === 12) {
-    hours = 0;
-  }
-  return hours * 60 + parseInt(minutes);
-};
+
 
 // Validate end after start
-slotSchema.pre('validate', function(next) {
+slotSchema.pre('validate', function (next) {
   if (this.startTime && this.endTime) {
-    const start = this.convertTo24Hour(this.startTime);
-    const end = this.convertTo24Hour(this.endTime);
+    const start = convertToMinutes(this.startTime);
+    const end = convertToMinutes(this.endTime);
     if (start >= end) {
       this.invalidate('endTime', 'End time must be after start time');
     }
