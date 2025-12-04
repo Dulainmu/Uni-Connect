@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,17 +11,20 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { ticketService, Ticket, CreateTicketData } from "@/services/ticketService";
-import { 
-  Plus, 
+import {
+  Plus,
   Ticket as TicketIcon,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
-  Bell,
-  Loader2
+  Loader2,
+  MoreHorizontal,
+  Search,
+  Filter
 } from "lucide-react";
-import Logo from "@/components/Logo";
+import DashboardLayout from "@/components/DashboardLayout";
+import { cn } from "@/lib/utils";
 
 interface TicketData {
   title: string;
@@ -41,17 +41,11 @@ const Tickets = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const form = useForm<TicketData>({
-    defaultValues: {
-      title: '',
-      category: '',
-      description: '',
-      priority: 'medium',
-      department: ''
-    }
+    defaultValues: { title: '', category: '', description: '', priority: 'medium', department: '' }
   });
 
-  // Fetch tickets on component mount
   useEffect(() => {
     fetchTickets();
   }, []);
@@ -59,75 +53,19 @@ const Tickets = () => {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      console.log('Fetching tickets for role:', user?.role || 'student');
       const response = await ticketService.getTicketsByRole(user?.role || 'student');
-      console.log('Tickets response:', response);
       setTickets(response.data.tickets);
-      console.log('Set tickets:', response.data.tickets);
     } catch (error) {
       console.error('Error fetching tickets:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load tickets. Please try again.",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to load tickets.", variant: "destructive" });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "open":
-        return <AlertCircle className="w-4 h-4 text-orange-500" />;
-      case "in_progress":
-        return <Clock className="w-4 h-4 text-blue-500" />;
-      case "resolved":
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case "closed":
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <AlertCircle className="w-4 h-4 text-orange-500" />;
-    }
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "open":
-        return "destructive";
-      case "in_progress":
-        return "default";
-      case "resolved":
-        return "secondary";
-      case "closed":
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) {
-      return "Just now";
-    } else if (diffInHours < 24) {
-      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
     }
   };
 
   const onSubmit = async (data: TicketData) => {
     try {
       setSubmitting(true);
-      
-      console.log('Form data received:', data);
-      console.log('Current user:', user);
-      
       const ticketData: CreateTicketData = {
         title: data.title,
         description: data.description,
@@ -135,112 +73,134 @@ const Tickets = () => {
         priority: data.priority as any,
         department: data.department
       };
-
-      console.log('Creating ticket with data:', ticketData);
-      const response = await ticketService.createTicket(ticketData);
-      console.log('Ticket creation response:', response);
-      
-      toast({
-        title: "Ticket submitted successfully",
-        description: "Your ticket has been created and assigned a reference number."
-      });
-      
+      await ticketService.createTicket(ticketData);
+      toast({ title: "Success", description: "Ticket submitted successfully." });
       form.reset();
       setIsDialogOpen(false);
-      console.log('Refreshing tickets list...');
-      fetchTickets(); // Refresh the tickets list
+      fetchTickets();
     } catch (error) {
-      console.error('Error creating ticket:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create ticket. Please try again.",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to create ticket.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Logo size={32} />
-              <span className="text-xl font-bold">UniConnect</span>
-            </div>
-            <nav className="hidden md:flex items-center gap-6 ml-8">
-              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
-              <Link to="/chat" className="text-muted-foreground hover:text-foreground">Chat</Link>
-              <Link to="/tickets" className="text-primary font-medium">Support</Link>
-              <Link to="/appointments" className="text-muted-foreground hover:text-foreground">Appointments</Link>
-              <Link to="/announcements" className="text-muted-foreground hover:text-foreground">Announcements</Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="w-4 h-4" />
-            </Button>
-            <Avatar>
-              <AvatarFallback className="bg-primary text-primary-foreground">C</AvatarFallback>
-            </Avatar>
-          </div>
-        </div>
-      </header>
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "open": return "text-orange-500 bg-orange-500/10 border-orange-500/20";
+      case "in_progress": return "text-blue-500 bg-blue-500/10 border-blue-500/20";
+      case "resolved": return "text-green-500 bg-green-500/10 border-green-500/20";
+      case "closed": return "text-gray-500 bg-gray-500/10 border-gray-500/20";
+      default: return "text-gray-500 bg-gray-500/10 border-gray-500/20";
+    }
+  };
 
-      <div className="px-6 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Page Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Submit Tickets</h1>
-              <p className="text-muted-foreground">Get help with your concerns, assignments, and more.</p>
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "urgent": return "text-red-500 bg-red-500/10";
+      case "high": return "text-orange-500 bg-orange-500/10";
+      case "medium": return "text-yellow-500 bg-yellow-500/10";
+      case "low": return "text-green-500 bg-green-500/10";
+      default: return "text-gray-500 bg-gray-500/10";
+    }
+  };
+
+  const filterTickets = (status: string) => {
+    return tickets.filter(t =>
+      t.status === status &&
+      (t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  };
+
+  const KanbanColumn = ({ title, status, icon: Icon }: { title: string, status: string, icon: any }) => (
+    <div className="flex flex-col gap-4 min-w-[300px] flex-1">
+      <div className="flex items-center justify-between px-2">
+        <h3 className="font-semibold flex items-center gap-2 text-muted-foreground">
+          <Icon className="w-4 h-4" />
+          {title}
+          <span className="bg-white/10 text-xs px-2 py-0.5 rounded-full text-foreground">{filterTickets(status).length}</span>
+        </h3>
+      </div>
+      <div className="flex flex-col gap-3">
+        {filterTickets(status).map((ticket) => (
+          <div key={ticket._id} className="glass-card p-4 rounded-xl hover:border-primary/50 transition-all cursor-pointer group relative overflow-hidden">
+            <div className={cn("absolute left-0 top-0 bottom-0 w-1", getStatusColor(status).split(" ")[1].replace("/10", ""))}></div>
+            <div className="flex justify-between items-start mb-2 pl-2">
+              <span className="text-xs font-mono text-muted-foreground">#{ticket.ticketNumber}</span>
+              <Badge variant="outline" className={cn("text-[10px] capitalize border-0", getPriorityColor(ticket.priority))}>
+                {ticket.priority}
+              </Badge>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  New Ticket
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Submit New Ticket</DialogTitle>
-                  <DialogDescription>
-                    Fill out the form below to submit a new support ticket.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      rules={{ required: 'Title is required' }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Subject</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter a brief title" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+            <h4 className="font-medium text-sm mb-2 pl-2 group-hover:text-primary transition-colors line-clamp-2">{ticket.title}</h4>
+            <div className="flex items-center justify-between mt-3 pl-2">
+              <span className="text-xs text-muted-foreground capitalize bg-white/5 px-2 py-1 rounded-md">{ticket.category}</span>
+              <span className="text-[10px] text-muted-foreground">{new Date(ticket.createdAt).toLocaleDateString()}</span>
+            </div>
+          </div>
+        ))}
+        {filterTickets(status).length === 0 && (
+          <div className="h-24 rounded-xl border-2 border-dashed border-white/5 flex items-center justify-center text-muted-foreground text-sm">
+            No tickets
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <DashboardLayout>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Support Tickets</h1>
+          <p className="text-muted-foreground">Track and manage your support requests.</p>
+        </div>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search tickets..."
+              className="pl-10 bg-white/5 border-white/10 focus:border-primary/50"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 whitespace-nowrap">
+                <Plus className="w-4 h-4 mr-2" />
+                New Ticket
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] glass-card border-primary/20">
+              <DialogHeader>
+                <DialogTitle>Submit New Ticket</DialogTitle>
+                <DialogDescription>Describe your issue to get help.</DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    rules={{ required: 'Required' }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subject</FormLabel>
+                        <FormControl><Input placeholder="Brief summary" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="category"
-                      rules={{ required: 'Category is required' }}
+                      rules={{ required: 'Required' }}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Category</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
                             <SelectContent>
                               <SelectItem value="technical">Technical</SelectItem>
                               <SelectItem value="academic">Academic</SelectItem>
@@ -260,11 +220,7 @@ const Tickets = () => {
                         <FormItem>
                           <FormLabel>Priority</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                            </FormControl>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
                             <SelectContent>
                               <SelectItem value="low">Low</SelectItem>
                               <SelectItem value="medium">Medium</SelectItem>
@@ -276,95 +232,41 @@ const Tickets = () => {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      rules={{ required: 'Description is required' }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Describe your issue in detail..."
-                              className="min-h-[100px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={submitting}>
-                      {submitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        "Submit Ticket"
-                      )}
-                    </Button>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Tickets List */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TicketIcon className="w-5 h-5" />
-                Your Queries
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                  <span className="ml-2">Loading tickets...</span>
-                </div>
-              ) : tickets.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <TicketIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No tickets found.</p>
-                  <p className="text-sm">Create your first ticket to get started.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {tickets.map((ticket) => (
-                    <div key={ticket._id} className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-secondary/30 transition-colors">
-                      <div className="flex items-center gap-4">
-                        {getStatusIcon(ticket.status)}
-                        <div>
-                          <h4 className="font-medium mb-1">{ticket.title}</h4>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>#{ticket.ticketNumber}</span>
-                            <span className="capitalize">{ticket.category}</span>
-                            <span>Created: {formatDate(ticket.createdAt)}</span>
-                            <span>Last updated: {formatDate(ticket.updatedAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                          {ticket.status.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    rules={{ required: 'Required' }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl><Textarea placeholder="Detailed explanation..." className="min-h-[100px]" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="animate-spin" /> : "Submit Ticket"}</Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
-    </div>
+
+      {loading ? (
+        <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      ) : (
+        <div className="flex flex-col lg:flex-row gap-6 overflow-x-auto pb-6">
+          <KanbanColumn title="Open" status="open" icon={AlertCircle} />
+          <KanbanColumn title="In Progress" status="in_progress" icon={Clock} />
+          <KanbanColumn title="Resolved" status="resolved" icon={CheckCircle} />
+          <KanbanColumn title="Closed" status="closed" icon={XCircle} />
+        </div>
+      )}
+    </DashboardLayout>
   );
 };
 
