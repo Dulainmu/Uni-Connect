@@ -1,93 +1,21 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Bell, 
-  Calendar, 
-  MessageSquare, 
-  Users, 
-  BookOpen, 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Bell,
+  Calendar,
+  MessageSquare,
+  BookOpen,
   Clock,
-  ChevronRight,
-  Settings,
-  LogOut
+  ChevronRight
 } from "lucide-react";
-import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { useNotifications } from "@/contexts/NotificationContext";
-
-// NotificationBell component
-function NotificationBell() {
-  const { notifications, unreadCount, markAllAsRead } = useNotifications();
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative">
-      <Button variant="ghost" size="icon" onClick={() => setOpen((v) => !v)} aria-label="Notifications">
-        <Bell className="w-4 h-4" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs px-1">
-            {unreadCount}
-          </span>
-        )}
-      </Button>
-      {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-background border border-border rounded-lg shadow-lg z-50">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-            <span className="font-semibold">Notifications</span>
-            <button className="text-xs text-primary underline" onClick={() => { markAllAsRead(); setOpen(false); }}>Mark all as read</button>
-          </div>
-          <div className="max-h-64 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">No notifications</div>
-            ) : (
-              notifications.map((notif) => (
-                <div key={notif.id} className={`px-4 py-2 border-b border-border last:border-b-0 ${!notif.read ? 'bg-accent/20' : ''}`}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium capitalize">{notif.type}</span>
-                    <span className="text-xs text-muted-foreground ml-auto">{new Date(notif.createdAt).toLocaleTimeString()}</span>
-                  </div>
-                  <div className="text-sm mt-1">{notif.message}</div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import DashboardLayout from "@/components/DashboardLayout";
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-      toast({
-        title: "Success",
-        description: "Logged out successfully!",
-      });
-      navigate("/login");
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to logout. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
+  const { user } = useAuth();
   const studentName = user?.firstName || "User";
 
   const announcements = [
@@ -156,232 +84,186 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Logo size={32} />
-              <span className="text-xl font-bold">UniConnect</span>
-            </div>
-            <nav className="hidden md:flex items-center gap-6 ml-8">
-              <Link to="/dashboard" className="text-primary font-medium">Dashboard</Link>
-              <Link to="/chat" className="text-muted-foreground hover:text-foreground">Chat</Link>
-              <Link to="/tickets" className="text-muted-foreground hover:text-foreground">Support</Link>
-              <Link to="/appointments" className="text-muted-foreground hover:text-foreground">Appointments</Link>
-              <Link to="/announcements" className="text-muted-foreground hover:text-foreground">Announcements</Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{user?.role === 'student' ? 'Student' : user?.role === 'lecturer' ? 'Lecturer' : 'Admin'}</span>
-              {user?.role === 'student' && user?.studentId && (
-                <span>• {user.studentId}</span>
-              )}
-              {user?.role === 'lecturer' && user?.department && (
-                <span>• {user.department}</span>
-              )}
-            </div>
-            {/* Replace Bell icon with NotificationBell */}
-            <NotificationBell />
-            <div className="flex items-center gap-2">
-              <Avatar>
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {user?.firstName?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden md:block">
-                <p className="text-sm font-medium">{user?.fullName || 'User'}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                title="Logout"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+    <DashboardLayout>
+      {/* Welcome Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight mb-2">
+            Hello, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">{studentName}</span> 👋
+          </h1>
+          <p className="text-muted-foreground text-lg">Here's your daily campus overview.</p>
         </div>
-      </header>
-
-      <div className="px-6 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Welcome Section */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {studentName}</h1>
-            <p className="text-muted-foreground">Here's what's happening with your studies today.</p>
+        <div className="flex gap-3">
+          <div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2 text-sm">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            Online
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Announcements */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="w-5 h-5" />
-                    Announcements
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {announcements.map((announcement) => (
-                      <div key={announcement.id} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm mb-1">{announcement.title}</h4>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{announcement.course}</span>
-                            <span>•</span>
-                            <span>{announcement.time}</span>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <Link to="/announcements">
-                    <Button variant="outline" className="w-full mt-4">
-                      View More
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* My Modules */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5" />
-                    My Modules
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {modules.map((module) => (
-                      <div key={module.id} className="p-4 rounded-lg border border-border hover:bg-secondary/30 transition-colors cursor-pointer">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="secondary">{module.code}</Badge>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <h4 className="font-medium mb-1">{module.name}</h4>
-                        <p className="text-sm text-muted-foreground mb-2">{module.lecturer}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          <span>Next: {module.nextClass}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column - Sidebar */}
-            <div className="space-y-6">
-              {/* Unread Messages */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Unread Messages</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer">
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">AT</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">Dr. Amelia Turner</p>
-                        <p className="text-xs text-muted-foreground truncate">Latest message about...</p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">2</Badge>
-                    </div>
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer">
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">JD</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">Dr. John Davis</p>
-                        <p className="text-xs text-muted-foreground truncate">Your assignment feedback...</p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">1</Badge>
-                    </div>
-                  </div>
-                  <Link to="/chat">
-                    <Button variant="outline" className="w-full mt-4">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Open Chat Centre
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* Upcoming Appointments */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Upcoming Appointments</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {upcomingAppointments.map((appointment) => (
-                      <div key={appointment.id} className="p-3 rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className="text-xs">{appointment.type}</Badge>
-                          <span className="text-xs text-muted-foreground">{appointment.time}</span>
-                        </div>
-                        <h4 className="font-medium text-sm mb-1">{appointment.lecturer}</h4>
-                        <p className="text-xs text-muted-foreground">{appointment.subject}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <Link to="/appointments">
-                    <Button variant="outline" className="w-full mt-4">
-                      Book New Appointment
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* Quick Access */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Quick Access</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Link to="/chat" className="p-3 rounded-lg border border-border hover:bg-secondary/30 transition-colors text-center group">
-                      <MessageSquare className="w-6 h-6 mx-auto mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                      <p className="text-xs font-medium">Chat Centre</p>
-                      <Badge variant="secondary" className="mt-1 text-xs">3</Badge>
-                    </Link>
-                    <Link to="/tickets" className="p-3 rounded-lg border border-border hover:bg-secondary/30 transition-colors text-center group">
-                      <Users className="w-6 h-6 mx-auto mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                      <p className="text-xs font-medium">Support Tickets</p>
-                    </Link>
-                    <Link to="/appointments" className="p-3 rounded-lg border border-border hover:bg-secondary/30 transition-colors text-center group">
-                      <Calendar className="w-6 h-6 mx-auto mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                      <p className="text-xs font-medium">Appointments</p>
-                    </Link>
-                    <Link to="#" className="p-3 rounded-lg border border-border hover:bg-secondary/30 transition-colors text-center group">
-                      <BookOpen className="w-6 h-6 mx-auto mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                      <p className="text-xs font-medium">Resources</p>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="glass-panel px-4 py-2 rounded-full text-sm">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
           </div>
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4" style={{ animationDelay: '0.1s' }}>
+            {quickAccess.map((item, index) => (
+              <Link
+                key={index}
+                to={item.name === "Chat Centre" ? "/chat" : item.name === "Support Tickets" ? "/tickets" : "/appointments"}
+                className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center gap-3 group hover:-translate-y-1 transition-transform"
+              >
+                <div className="p-3 bg-primary/10 rounded-xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <item.icon className="w-6 h-6" />
+                </div>
+                <span className="text-sm font-medium text-center">{item.name}</span>
+                {item.count && (
+                  <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground">
+                    {item.count} New
+                  </Badge>
+                )}
+              </Link>
+            ))}
+          </div>
+
+          {/* Announcements */}
+          <div style={{ animationDelay: '0.2s' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" />
+                Latest Updates
+              </h2>
+              <Link to="/announcements" className="text-sm text-primary hover:underline">View All</Link>
+            </div>
+            <div className="space-y-4">
+              {announcements.map((announcement) => (
+                <div key={announcement.id} className="glass-card p-5 rounded-2xl group cursor-pointer">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${announcement.type === 'urgent' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
+                        }`}>
+                        <Bell className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-lg group-hover:text-primary transition-colors">{announcement.title}</h4>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                          <span className="bg-secondary/10 text-secondary px-2 py-0.5 rounded text-xs font-medium">{announcement.course}</span>
+                          <span>•</span>
+                          <span>{announcement.time}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* My Modules */}
+          <div style={{ animationDelay: '0.3s' }}>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              My Modules
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {modules.map((module) => (
+                <div key={module.id} className="glass-card p-5 rounded-2xl hover:border-primary/50 transition-colors cursor-pointer relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+
+                  <div className="flex justify-between items-start mb-4">
+                    <Badge variant="outline" className="bg-background/50 backdrop-blur-sm border-primary/20 text-primary">
+                      {module.code}
+                    </Badge>
+                    <div className="p-2 bg-background/50 rounded-lg text-muted-foreground group-hover:text-primary transition-colors">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                  </div>
+
+                  <h3 className="font-bold text-lg mb-1">{module.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{module.lecturer}</p>
+
+                  <div className="flex items-center gap-2 text-xs font-medium bg-secondary/10 text-secondary w-fit px-3 py-1.5 rounded-lg">
+                    <Clock className="w-3 h-3" />
+                    Next: {module.nextClass}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Widgets */}
+        <div className="space-y-8" style={{ animationDelay: '0.4s' }}>
+          {/* Upcoming Appointments Widget */}
+          <div className="glass-card p-6 rounded-3xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full -mr-8 -mt-8"></div>
+
+            <div className="flex items-center justify-between mb-6 relative z-10">
+              <h3 className="font-bold text-lg">Upcoming</h3>
+              <Link to="/appointments" className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                <Calendar className="w-5 h-5 text-primary" />
+              </Link>
+            </div>
+
+            <div className="space-y-4 relative z-10">
+              {upcomingAppointments.map((appointment, i) => (
+                <div key={appointment.id} className="flex gap-4 items-start pb-4 border-b border-border/50 last:border-0 last:pb-0">
+                  <div className="flex flex-col items-center">
+                    <span className="text-xs font-bold text-muted-foreground uppercase">{appointment.time.split(',')[0]}</span>
+                    <div className="w-0.5 h-full bg-border/50 my-1"></div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm">{appointment.subject}</h4>
+                    <p className="text-xs text-muted-foreground mb-1">{appointment.lecturer}</p>
+                    <Badge variant="secondary" className="text-[10px] h-5">{appointment.type}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Link to="/appointments">
+              <Button className="w-full mt-6 bg-primary/10 text-primary hover:bg-primary hover:text-white border-0">
+                Book Appointment
+              </Button>
+            </Link>
+          </div>
+
+          {/* Messages Widget */}
+          <div className="glass-card p-6 rounded-3xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-lg">Messages</h3>
+              <Badge variant="destructive" className="rounded-full w-6 h-6 p-0 flex items-center justify-center">3</Badge>
+            </div>
+
+            <div className="space-y-4">
+              {[1, 2].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+                  <Avatar>
+                    <AvatarFallback className="bg-secondary/20 text-secondary">JD</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Dr. John Doe</p>
+                    <p className="text-xs text-muted-foreground truncate">Please check the attached file...</p>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">2m</span>
+                </div>
+              ))}
+            </div>
+
+            <Link to="/chat">
+              <Button variant="outline" className="w-full mt-6 border-primary/20 hover:bg-primary/5 text-primary">
+                Open Chat
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
